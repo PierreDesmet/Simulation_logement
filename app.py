@@ -6,7 +6,7 @@ from PIL import Image
 from fonctions import (
     lieu_to_inflation_appart,
     lieu_to_inflation_maison,
-    get_mt_mensualités,
+    get_mt_emprunt_max,
     sep_milliers,
     nb_mois_depuis_que_lisa_économise,
     montant_qui_sera_remboursé_à_date
@@ -14,11 +14,12 @@ from fonctions import (
 
 # Hypothèses
 SECURITE_LISA = 15_000
-TAUX_CRÉDITS_PUBLIC = 0.0392
+TAUX_CRÉDITS_PUBLIC = 0.04
 # https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf
-TAUX_FRAIS_AGENCE = 0.045
+TAUX_FRAIS_AGENCE = 0.05
 
 # Appartement actuel à Cachan
+TX_LBP = 0.9
 DATE_DÉBUT_DU_PRÊT_EXISTANT = datetime.date(2020, 10, 1)
 MONTANT_REMBOURSÉ_PAR_MOIS = 878
 CHARGES_MENSUELLES = 215
@@ -52,11 +53,22 @@ select_avec_vente_appartement = st.sidebar.checkbox(
     "Avec vente appartement de Cachan", True
 )
 select_avec_crédit_BNP = st.sidebar.checkbox("Avec taux avantageux BNP", True)
-select_tx_nominal = st.sidebar.slider("Taux nominal public", 0.01, 0.05, TAUX_CRÉDITS_PUBLIC)
-select_tx_frais_agence = st.sidebar.slider("[Frais d'agence](https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf)", 0.02, 0.06, TAUX_FRAIS_AGENCE)
+select_remb_anticipé_gratuit = st.sidebar.checkbox(
+    "Avec clause de remboursement anticipée gratuite", True
+)
+select_tx_nominal = st.sidebar.slider(
+    "[Taux nominal public]"
+    "(https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)",
+    0.01, 0.05, TAUX_CRÉDITS_PUBLIC, step=0.01
+)
+select_tx_frais_agence = st.sidebar.slider(
+    "[Frais d'agence]"
+    "(https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf)",
+    0.02, 0.06, TAUX_FRAIS_AGENCE
+)
 select_nb_années_pr_rembourser = st.sidebar.slider(
     "Nombre d'années pour rembourser",
-    min_value=15, max_value=25, value=25, step=5
+    min_value=15, max_value=30, value=25, step=5
 )
 select_gain_mensuel_pde = st.sidebar.slider(
     'Gain mensuel Pierre',
@@ -67,14 +79,14 @@ select_gain_mensuel_lvo = st.sidebar.slider(
     'Gain mensuel Lisa',
     min_value=1000, max_value=2500, value=2000, step=100
 )
-select_apport_pde = st.sidebar.slider(
+select_apport_actuel_pde = st.sidebar.slider(
     'Apport actuel Pierre',
     min_value=20_000, max_value=150_000, value=50_000, step=5000
 )
 apport_lvo_actuel_default = int(
     select_gain_mensuel_lvo * nb_mois_depuis_que_lisa_économise() - SECURITE_LISA
 )
-select_apport_lvo = st.sidebar.slider(
+select_apport_actuel_lvo = st.sidebar.slider(
     'Apport actuel Lisa',
     min_value=20_000, max_value=150_000, value=apport_lvo_actuel_default, step=5000
 )
@@ -98,40 +110,65 @@ montant_qui_sera_remboursé = montant_qui_sera_remboursé_à_date(
     date=select_date_achat
 )
 prix_estimé_revente = PRIX_APPARTEMENT_CACHAN * (1 + lieu_to_inflation_appart['CACHAN'])
-gain_revente = prix_estimé_revente - PRIX_APPARTEMENT_CACHAN
-dû_à_la_banque = MONTANT_EMPRUNTE - montant_qui_sera_remboursé
+mt_remb_par_anticipation = MONTANT_EMPRUNTE - montant_qui_sera_remboursé
+# Source : pdf des conditions générales LBP
+indemnités_de_remb_par_anticipation = min(
+    TX_LBP * mt_remb_par_anticipation * 6,
+    mt_remb_par_anticipation * 0.03,
+)
+dû_à_la_banque = mt_remb_par_anticipation + (
+    (not select_remb_anticipé_gratuit) * indemnités_de_remb_par_anticipation
+)
+solde_revente = prix_estimé_revente - dû_à_la_banque
 
-apport_qui_sera_apporté_pde = select_apport_pde
+apport_qui_sera_apporté_pde = select_apport_actuel_pde
 apport_qui_sera_apporté_pde += select_gain_mensuel_pde * nb_mois_restants_avant_achat
-apport_qui_sera_apporté_pde += gain_revente * select_avec_vente_appartement
-apport_qui_sera_apporté_pde -= dû_à_la_banque * select_avec_vente_appartement
+apport_qui_sera_apporté_pde += solde_revente * select_avec_vente_appartement
 
-apport_qui_sera_apporté_lvo = select_apport_lvo
+apport_qui_sera_apporté_lvo = select_apport_actuel_lvo
 apport_qui_sera_apporté_lvo += select_gain_mensuel_lvo * nb_mois_restants_avant_achat
+
+montant_total_qui_sera_apporté = apport_qui_sera_apporté_pde + apport_qui_sera_apporté_lvo
 
 mensualité_max_pde = TAUX_MAX_ENDETTEMENT * (
     select_w_mensuel_pde_date_achat - (
-        (not select_avec_vente_appartement) * (MONTANT_REMBOURSÉ_PAR_MOIS + CHARGES_MENSUELLES)
+        (not select_avec_vente_appartement) * (MONTANT_REMBOURSÉ_PAR_MOIS)  # + CHARGES_MENSUELLES ?
     )
 )
-capacité_max_emprunt_pde = mensualité_max_pde * DURÉE_MAX_CRÉDIT_EN_MOIS
+capacité_max_emprunt_pde = mensualité_max_pde * select_nb_années_pr_rembourser
 mensualité_max_lvo = TAUX_MAX_ENDETTEMENT * select_w_mensuel_lvo_date_achat
-capacité_max_emprunt_lvo = mensualité_max_lvo * DURÉE_MAX_CRÉDIT_EN_MOIS
+capacité_max_emprunt_lvo = mensualité_max_lvo * select_nb_années_pr_rembourser
 
-capacité_emprunt_totale = capacité_max_emprunt_pde + capacité_max_emprunt_lvo
-montant_total_qui_sera_apporté = apport_qui_sera_apporté_pde + apport_qui_sera_apporté_lvo
+tx_nominal = select_tx_nominal / (1 + select_avec_crédit_BNP)
 
-mensualité = get_mt_mensualités(
-    mt_emprunt=capacité_emprunt_totale,
-    tx_nominal=select_tx_nominal / (1 + select_avec_crédit_BNP),
+mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
+st.markdown(
+    'Mensualité maximale supportable par Lisa et Pierre : '
+    f'{sep_milliers(mensualité_maximale, 0)} €, '
+    f'dont {sep_milliers(mensualité_max_pde, 0)} € Pierre et '
+    f'{sep_milliers(mensualité_max_lvo, 0)} € Lisa.'
+)
+mt_emprunt_max = get_mt_emprunt_max(
+    mensualité_max=mensualité_maximale,
+    tx_nominal=tx_nominal,
     nb_mois=select_nb_années_pr_rembourser * 12
 )
-prix_maximal_appartement = montant_total_qui_sera_apporté + capacité_emprunt_totale
-coût_crédit = mensualité * 12 * select_nb_années_pr_rembourser - capacité_emprunt_totale
+st.markdown(
+    f'Cette mensualité, adossée à un taux nominal de {tx_nominal:.2%}, '
+    f"permet d'emprunter au maximum {sep_milliers(mt_emprunt_max, 0)} € "
+    f'sur {select_nb_années_pr_rembourser} ans.'
+)
+budget = montant_total_qui_sera_apporté + mt_emprunt_max
+phrase = f'Notre apport est de {sep_milliers(montant_total_qui_sera_apporté, 0)} €'
+if select_avec_vente_appartement:
+    phrase += (
+        f", dont {sep_milliers(solde_revente, 0)} € liés à la revente de l'appartement de Cachan"
+    )
+st.markdown(phrase + '.')
 
-st.markdown('Prix maximal du logement : ' + sep_milliers(prix_maximal_appartement, 0) + ' €')
+st.markdown(f"Notre budget total d'achat est de {sep_milliers(budget, 0)} €.")
+
 st.markdown("Attention, il faut prendre en compte :")
-
 lieu_to_inflation = (
     lieu_to_inflation_appart if select_appart_ou_maison == 'Appartement'
     else lieu_to_inflation_maison
@@ -139,42 +176,48 @@ lieu_to_inflation = (
 inflation_temps_restant_avant_achat = (
     (nb_mois_restants_avant_achat / 12) / 5
 ) * lieu_to_inflation[select_ville]
-prix_maximal_appartement = round(
-    prix_maximal_appartement / (1 + inflation_temps_restant_avant_achat)
+budget = round(budget / (1 + inflation_temps_restant_avant_achat))
+st.markdown(
+    f"* L'inflation ({lieu_to_inflation[select_ville]:.2%} en 5 ans à {select_ville}) : "
+    f'{sep_milliers(budget, 0)} €'
 )
-st.markdown(f"* L'inflation : {sep_milliers(prix_maximal_appartement, 0)} €")
 
 
-prix_maximal_appartement -= coût_crédit
-st.markdown(f"* Le coût du crédit (hors assurance) : {sep_milliers(prix_maximal_appartement, 0)} €")
+coût_crédit = mensualité_maximale * 12 * select_nb_années_pr_rembourser - mt_emprunt_max
+budget -= coût_crédit
+st.markdown(f"* Le coût du crédit (hors assurance) : {sep_milliers(budget, 0)} €")
 
 frais_de_notaire = 0.08 if select_neuf_ancien == 'Ancien' else 0.03
-frais_de_notaire *= prix_maximal_appartement
-prix_maximal_appartement -= frais_de_notaire
-st.markdown(f"* Les frais de notaire : {sep_milliers(prix_maximal_appartement, 0)} €")
+frais_de_notaire *= budget
+budget -= frais_de_notaire
+st.markdown(f"* Les frais de notaire : {sep_milliers(budget, 0)} €")
 
-prix_maximal_appartement -= (select_tx_frais_agence * prix_maximal_appartement)
-st.markdown(f"* Les frais d'agence : {sep_milliers(prix_maximal_appartement, 0)} €")
+budget -= (select_tx_frais_agence * budget)
+st.markdown(f"* Les frais d'agence : {sep_milliers(budget, 0)} €")
 
-st.markdown(f'**➜ Soit un prix final maximum de : {sep_milliers(prix_maximal_appartement, 0)} €**')
+if not select_remb_anticipé_gratuit:
+    budget -= indemnités_de_remb_par_anticipation
+    st.markdown(
+        "* Les indemnités de remboursement par anticipation : "
+        f'{sep_milliers(budget, 0)} €.'
+    )
+
+st.markdown(f'**➜ Soit un prix final maximum de : {sep_milliers(budget, 0)} €**')
 st.markdown('-' * 3)
-
-st.markdown("Pour obtenir cet appartement il nous faut :")
-st.markdown(f'* avoir un apport de {sep_milliers(montant_total_qui_sera_apporté, 0)} € ')
-st.markdown(f'* obtenir un emprunt de {sep_milliers(capacité_emprunt_totale, 0)} €')
-
-st.markdown(f'Les mensualités : {sep_milliers(mensualité)} €')
-
-
-st.markdown(f'Le coût du crédit : {sep_milliers(coût_crédit, 0)} €')
 
 
 st.markdown("TODO: prendre en compte l'assurance du prêt, et les autres composantes du TAEG...")
+
 # https://www.service-public.fr/particuliers/vosdroits/F2456
-# Intérêts bancaires calculés sur la base du taux actuariel : Taux qui permet de calculer le montant effectif des intérêts que l'emprunteur doit verser au prêteur
 # Frais de dossier (payés à la banque)
 # Frais payés ou dus à des intermédiaires intervenus dans l'octroi du prêt (courtier par exemple)
 # Coût de l'assurance emprunteur
 # Frais de garanties (hypothèque ou cautionnement)
 # Frais d'évaluation du bien immobilier (payés à un agent immobilier)
-# Tous les autres frais qui vous sont imposés pour l'obtention du crédit (frais de tenue de compte, en cas d'obligation d'ouverture de compte dans la banque qui octroie le prêt)
+# Tous les autres frais qui vous sont imposés pour l'obtention du crédit :
+# frais de tenue de compte, si obligation d'ouverture de compte dans la banque qui octroie le prêt
+
+# Si je garde mon appartement, c'est pour le mettre en location (et donc, j'aurai des revenus fonciers). On lit ici que les revenus fonciers sont pris en compte dans le calcul du taux d'endettement à hauteur de 70% : https://fr.luko.eu/conseils/guide/taux-endettement-maximum/
+# La banque ne prend-elle pas en compte nos futures charges à Rueil, ni celles que j'ai actuellement (215€ / mois) ?
+
+# TODO : vf que pour un euro d'emprunt supplémentaire, ça passe plus (mensualité > mensualité max)

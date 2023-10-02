@@ -1,2 +1,6 @@
 .vscode
 .ipynb_checkpoints/
+*.pyc
+__pycache__
+__pycache__/
+__pycache__/fonctions.cpython-38.pyc

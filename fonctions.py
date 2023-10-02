@@ -42,6 +42,19 @@ def get_mt_mensualités(mt_emprunt: float, tx_nominal: float, nb_mois: int):
 assert round(get_mt_mensualités(230_000, 0.02, 20 * 12)) == 1164
 
 
+def get_mt_emprunt_max(mensualité_max, tx_nominal, nb_mois):
+    """
+    À partir d'une mensualité maximale supportable, d'un taux nominal et d'un nombre
+    d'échéances, retourne le montant maximal empruntable.
+    Source :
+    https://immobilier.lefigaro.fr/financer/guide-financement-immobilier/
+    """
+    return 12 * mensualité_max / tx_nominal * (1 - (1 + tx_nominal / 12)**(-nb_mois))
+
+
+assert round(get_mt_emprunt_max(1164, 0.02, 20 * 12)) == 230_093  # ~230K
+
+
 def sep_milliers(nb, nb_dec=2):
     """
     Usage :
