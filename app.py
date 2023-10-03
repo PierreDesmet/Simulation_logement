@@ -14,9 +14,6 @@ from fonctions import (
 
 # Hypothèses
 SECURITE_LISA = 15_000
-TAUX_CRÉDITS_PUBLIC = 0.04
-# https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf
-TAUX_FRAIS_AGENCE = 0.05
 
 # Appartement actuel à Cachan
 TX_LBP = 0.9
@@ -40,7 +37,7 @@ st.set_page_config(
 )
 
 st.title('Estimation logement 2028')
-st.sidebar.markdown("## Modalités")
+st.sidebar.markdown("## Type d'appartement")
 select_ville = st.sidebar.selectbox('Ville', sorted(lieu_to_inflation_maison.keys()))
 select_appart_ou_maison = st.sidebar.selectbox(
     'Appartement ou maison', ['Appartement', 'Maison']
@@ -48,7 +45,7 @@ select_appart_ou_maison = st.sidebar.selectbox(
 select_neuf_ancien = st.sidebar.selectbox('Neuf ou ancien', ['Ancien', 'Neuf'])
 select_date_achat = st.sidebar.date_input('Date achat futur logement', datetime.date(2028, 1, 1))
 
-st.sidebar.markdown("## Hypothèses")
+st.sidebar.markdown("## Emprunt")
 select_avec_vente_appartement = st.sidebar.checkbox(
     "Avec vente appartement de Cachan", True
 )
@@ -59,17 +56,19 @@ select_remb_anticipé_gratuit = st.sidebar.checkbox(
 select_tx_nominal = st.sidebar.slider(
     "[Taux nominal public]"
     "(https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)",
-    0.01, 0.05, TAUX_CRÉDITS_PUBLIC, step=0.01
+    0.01, 0.05, 0.04, step=0.01  # TAUX_CRÉDITS_PUBLIC = 0.04
 )
 select_tx_frais_agence = st.sidebar.slider(
     "[Frais d'agence]"
     "(https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf)",
-    0.02, 0.06, TAUX_FRAIS_AGENCE
+    0.02, 0.06, 0.05
 )
 select_nb_années_pr_rembourser = st.sidebar.slider(
     "Nombre d'années pour rembourser",
     min_value=15, max_value=30, value=25, step=5
 )
+
+st.sidebar.markdown('## Apports')
 select_gain_mensuel_pde = st.sidebar.slider(
     'Gain mensuel Pierre',
     min_value=1000, max_value=2500, value=1500, step=100
@@ -110,13 +109,13 @@ montant_qui_sera_remboursé = montant_qui_sera_remboursé_à_date(
     date=select_date_achat
 )
 prix_estimé_revente = PRIX_APPARTEMENT_CACHAN * (1 + lieu_to_inflation_appart['CACHAN'])
-mt_remb_par_anticipation = MONTANT_EMPRUNTE - montant_qui_sera_remboursé
+CRD = MONTANT_EMPRUNTE - montant_qui_sera_remboursé
 # Source : pdf des conditions générales LBP
 indemnités_de_remb_par_anticipation = min(
-    TX_LBP * mt_remb_par_anticipation * 6,
-    mt_remb_par_anticipation * 0.03,
+    TX_LBP * CRD * 6,
+    CRD * 0.03,
 )
-dû_à_la_banque = mt_remb_par_anticipation + (
+dû_à_la_banque = CRD + (
     (not select_remb_anticipé_gratuit) * indemnités_de_remb_par_anticipation
 )
 solde_revente = prix_estimé_revente - dû_à_la_banque
@@ -166,7 +165,7 @@ if select_avec_vente_appartement:
     )
 st.markdown(phrase + '.')
 
-st.markdown(f"Notre budget total d'achat est de {sep_milliers(budget, 0)} €.")
+st.markdown(f"Notre budget total d'achat est donc de {sep_milliers(budget, 0)} €.")
 
 st.markdown("Attention, il faut prendre en compte :")
 lieu_to_inflation = (
@@ -187,6 +186,12 @@ coût_crédit = mensualité_maximale * 12 * select_nb_années_pr_rembourser - mt
 budget -= coût_crédit
 st.markdown(f"* Le coût du crédit (hors assurance) : {sep_milliers(budget, 0)} €")
 
+# mensualité d'assurance / mensualité du crédit
+tx_assurance_actuelle = 16.07 / MONTANT_REMBOURSÉ_PAR_MOIS
+coût_assurance = tx_assurance_actuelle * mensualité_maximale * 12 * select_nb_années_pr_rembourser
+budget -= coût_assurance
+st.markdown(f"* Le coût de l'assurance emprunteur : {sep_milliers(budget, 0)} €")
+
 frais_de_notaire = 0.08 if select_neuf_ancien == 'Ancien' else 0.03
 frais_de_notaire *= budget
 budget -= frais_de_notaire
@@ -206,18 +211,23 @@ st.markdown(f'**➜ Soit un prix final maximum de : {sep_milliers(budget, 0)} �
 st.markdown('-' * 3)
 
 
-st.markdown("TODO: prendre en compte l'assurance du prêt, et les autres composantes du TAEG...")
-
+st.markdown("TODO: Les autres composantes du TAEG...")
+st.markdown(
+    'Pour être exhaustive, cette simulation devrait aussi tenir compte '
+    'des gros impacts sur nos finances (le ravalement, les JO 2024, etc.)'
+)
 # https://www.service-public.fr/particuliers/vosdroits/F2456
 # Frais de dossier (payés à la banque)
 # Frais payés ou dus à des intermédiaires intervenus dans l'octroi du prêt (courtier par exemple)
-# Coût de l'assurance emprunteur
 # Frais de garanties (hypothèque ou cautionnement)
 # Frais d'évaluation du bien immobilier (payés à un agent immobilier)
 # Tous les autres frais qui vous sont imposés pour l'obtention du crédit :
 # frais de tenue de compte, si obligation d'ouverture de compte dans la banque qui octroie le prêt
 
 # Si je garde mon appartement, c'est pour le mettre en location (et donc, j'aurai des revenus fonciers). On lit ici que les revenus fonciers sont pris en compte dans le calcul du taux d'endettement à hauteur de 70% : https://fr.luko.eu/conseils/guide/taux-endettement-maximum/
+# Si je le revends, il y a des frais d'agence aussi...
 # La banque ne prend-elle pas en compte nos futures charges à Rueil, ni celles que j'ai actuellement (215€ / mois) ?
 
 # TODO : vf que pour un euro d'emprunt supplémentaire, ça passe plus (mensualité > mensualité max)
+# Séparer les variables de l'apport VS celles de l'emprunt dans l'IHM
+# Carte des prix DVF
