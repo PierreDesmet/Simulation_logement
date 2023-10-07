@@ -1,4 +1,12 @@
-"""Simulateur du montant que pourra coûter notre futur logis à Lisa et moi"""
+"""
+Simulateur du montant que pourra coûter notre futur logis à Lisa et moi
+
+Sources :
+- https://www.service-public.fr/particuliers/vosdroits/F2456
+- https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html
+- https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf
+- https://fr.luko.eu/conseils/guide/taux-endettement-maximum/
+"""
 import datetime
 import streamlit as st
 from PIL import Image
@@ -22,6 +30,7 @@ MONTANT_REMBOURSÉ_PAR_MOIS = 878
 CHARGES_MENSUELLES = 215
 PRIX_APPARTEMENT_CACHAN = 259_000
 MONTANT_EMPRUNTE = 192_000
+ASSURANCE_PRÊT = 16
 
 # "Le taux maximum d'endettement ne peux excéder 35 % des revenus des emprunteurs,
 # assurance comprise"
@@ -71,7 +80,7 @@ select_nb_années_pr_rembourser = st.sidebar.slider(
 st.sidebar.markdown('## Apports')
 select_gain_mensuel_pde = st.sidebar.slider(
     'Gain mensuel Pierre',
-    min_value=1000, max_value=2500, value=1500, step=100
+    min_value=1000, max_value=2500, value=1300, step=100
 )
 
 select_gain_mensuel_lvo = st.sidebar.slider(
@@ -129,10 +138,16 @@ apport_qui_sera_apporté_lvo += select_gain_mensuel_lvo * nb_mois_restants_avant
 
 montant_total_qui_sera_apporté = apport_qui_sera_apporté_pde + apport_qui_sera_apporté_lvo
 
+# Si je garde mon appartement, c'est pour le mettre en location (et donc, j'aurai
+# des revenus fonciers). On lit ici que les revenus fonciers sont pris en compte dans le
+# calcul du taux d'endettement à hauteur de 70% :
+# https://fr.luko.eu/conseils/guide/taux-endettement-maximum/
+# 1200 € : le montant que je peux mettre en location, charges comprises (source SeLoger)
 mensualité_max_pde = TAUX_MAX_ENDETTEMENT * (
-    select_w_mensuel_pde_date_achat - (
-        (not select_avec_vente_appartement) * (MONTANT_REMBOURSÉ_PAR_MOIS)  # + CHARGES_MENSUELLES ?
-    )
+    select_w_mensuel_pde_date_achat +
+    (not select_avec_vente_appartement) * (0.7 * (1200 - 250)) -
+    (not select_avec_vente_appartement) * (MONTANT_REMBOURSÉ_PAR_MOIS + ASSURANCE_PRÊT) -
+    (not select_avec_vente_appartement) * 0.0295 * 1200  # assurance loyer impayé, source Macif
 )
 capacité_max_emprunt_pde = mensualité_max_pde * select_nb_années_pr_rembourser
 mensualité_max_lvo = TAUX_MAX_ENDETTEMENT * select_w_mensuel_lvo_date_achat
@@ -197,8 +212,12 @@ frais_de_notaire *= budget
 budget -= frais_de_notaire
 st.markdown(f"* Les frais de notaire : {sep_milliers(budget, 0)} €")
 
-budget -= (select_tx_frais_agence * budget)
-st.markdown(f"* Les frais d'agence : {sep_milliers(budget, 0)} €")
+if select_avec_vente_appartement:
+    budget -= (select_tx_frais_agence * prix_estimé_revente)
+    st.markdown(
+        "* Les frais d'agence sur la revente de l'appartement de Cachan : "
+        f'{sep_milliers(budget, 0)} €'
+    )
 
 if not select_remb_anticipé_gratuit:
     budget -= indemnités_de_remb_par_anticipation
@@ -207,27 +226,27 @@ if not select_remb_anticipé_gratuit:
         f'{sep_milliers(budget, 0)} €.'
     )
 
+budget -= 1000
+st.markdown(f'* Les frais de dossier bancaire : {sep_milliers(budget, 0)} €')
+
 st.markdown(f'**➜ Soit un prix final maximum de : {sep_milliers(budget, 0)} €**')
 st.markdown('-' * 3)
 
 
-st.markdown("TODO: Les autres composantes du TAEG...")
 st.markdown(
     'Pour être exhaustive, cette simulation devrait aussi tenir compte '
     'des gros impacts sur nos finances (le ravalement, les JO 2024, etc.)'
 )
-# https://www.service-public.fr/particuliers/vosdroits/F2456
-# Frais de dossier (payés à la banque)
+
+# Autres composantes du TAEG :
 # Frais payés ou dus à des intermédiaires intervenus dans l'octroi du prêt (courtier par exemple)
 # Frais de garanties (hypothèque ou cautionnement)
 # Frais d'évaluation du bien immobilier (payés à un agent immobilier)
 # Tous les autres frais qui vous sont imposés pour l'obtention du crédit :
 # frais de tenue de compte, si obligation d'ouverture de compte dans la banque qui octroie le prêt
 
-# Si je garde mon appartement, c'est pour le mettre en location (et donc, j'aurai des revenus fonciers). On lit ici que les revenus fonciers sont pris en compte dans le calcul du taux d'endettement à hauteur de 70% : https://fr.luko.eu/conseils/guide/taux-endettement-maximum/
-# Si je le revends, il y a des frais d'agence aussi...
-# La banque ne prend-elle pas en compte nos futures charges à Rueil, ni celles que j'ai actuellement (215€ / mois) ?
+# La banque ne prend-elle pas en compte nos futures charges à Rueil, ni celles que j'ai
+# actuellement (215€ / mois) ?
 
 # TODO : vf que pour un euro d'emprunt supplémentaire, ça passe plus (mensualité > mensualité max)
-# Séparer les variables de l'apport VS celles de l'emprunt dans l'IHM
 # Carte des prix DVF
