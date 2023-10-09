@@ -47,7 +47,10 @@ st.set_page_config(
 
 st.title('Estimation logement 2028')
 st.sidebar.markdown("## Type d'appartement")
-select_ville = st.sidebar.selectbox('Ville', sorted(lieu_to_inflation_maison.keys()))
+select_ville = st.sidebar.selectbox(
+    'Ville', sorted(lieu_to_inflation_maison.keys()),
+    index=sorted(lieu_to_inflation_appart).index('RUEIL-MALMAISON')
+)
 select_appart_ou_maison = st.sidebar.selectbox(
     'Appartement ou maison', ['Appartement', 'Maison']
 )
@@ -60,7 +63,7 @@ select_avec_vente_appartement = st.sidebar.checkbox(
 )
 select_avec_crédit_BNP = st.sidebar.checkbox("Avec taux avantageux BNP", True)
 select_remb_anticipé_gratuit = st.sidebar.checkbox(
-    "Avec clause de remboursement anticipée gratuite", True
+    "Avec clause de remboursement anticipée gratuite", False
 )
 select_tx_nominal = st.sidebar.slider(
     "[Taux nominal public]"
@@ -143,6 +146,8 @@ montant_total_qui_sera_apporté = apport_qui_sera_apporté_pde + apport_qui_sera
 # calcul du taux d'endettement à hauteur de 70% :
 # https://fr.luko.eu/conseils/guide/taux-endettement-maximum/
 # 1200 € : le montant que je peux mettre en location, charges comprises (source SeLoger)
+# Hypothèse pessimiste : l'établissement bancaire retire les charges de copropriété de 
+# mes revenus fonciers dans le calcul du taux d'endettement. C'est plutôt rare, cf ChatGPT.
 mensualité_max_pde = TAUX_MAX_ENDETTEMENT * (
     select_w_mensuel_pde_date_achat +
     (not select_avec_vente_appartement) * (0.7 * (1200 - 250)) -
@@ -158,9 +163,9 @@ tx_nominal = select_tx_nominal / (1 + select_avec_crédit_BNP)
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 st.markdown(
     'Mensualité maximale supportable par Lisa et Pierre : '
-    f'{sep_milliers(mensualité_maximale, 0)} €, '
-    f'dont {sep_milliers(mensualité_max_pde, 0)} € Pierre et '
-    f'{sep_milliers(mensualité_max_lvo, 0)} € Lisa.'
+    f'{sep_milliers(mensualité_maximale)} €, '
+    f'dont {sep_milliers(mensualité_max_pde)} € Pierre et '
+    f'{sep_milliers(mensualité_max_lvo)} € Lisa.'
 )
 mt_emprunt_max = get_mt_emprunt_max(
     mensualité_max=mensualité_maximale,
@@ -169,18 +174,18 @@ mt_emprunt_max = get_mt_emprunt_max(
 )
 st.markdown(
     f'Cette mensualité, adossée à un taux nominal de {tx_nominal:.2%}, '
-    f"permet d'emprunter au maximum {sep_milliers(mt_emprunt_max, 0)} € "
+    f"permet d'emprunter au maximum {sep_milliers(mt_emprunt_max)} € "
     f'sur {select_nb_années_pr_rembourser} ans.'
 )
 budget = montant_total_qui_sera_apporté + mt_emprunt_max
-phrase = f'Notre apport est de {sep_milliers(montant_total_qui_sera_apporté, 0)} €'
+phrase = f'Notre apport est de {sep_milliers(montant_total_qui_sera_apporté)} €'
 if select_avec_vente_appartement:
     phrase += (
-        f", dont {sep_milliers(solde_revente, 0)} € liés à la revente de l'appartement de Cachan"
+        f", dont {sep_milliers(solde_revente)} € liés à la revente de l'appartement de Cachan"
     )
 st.markdown(phrase + '.')
 
-st.markdown(f"Notre budget total d'achat est donc de {sep_milliers(budget, 0)} €.")
+st.markdown(f"Notre budget total d'achat est donc de {sep_milliers(budget)} €.")
 
 st.markdown("Attention, il faut prendre en compte :")
 lieu_to_inflation = (
@@ -193,60 +198,59 @@ inflation_temps_restant_avant_achat = (
 budget = round(budget / (1 + inflation_temps_restant_avant_achat))
 st.markdown(
     f"* L'inflation ({lieu_to_inflation[select_ville]:.2%} en 5 ans à {select_ville}) : "
-    f'{sep_milliers(budget, 0)} €'
+    f'{sep_milliers(budget)} €'
 )
 
 
 coût_crédit = mensualité_maximale * 12 * select_nb_années_pr_rembourser - mt_emprunt_max
 budget -= coût_crédit
-st.markdown(f"* Le coût du crédit (hors assurance) : {sep_milliers(budget, 0)} €")
+st.markdown(f"* Le coût du crédit (hors assurance) : {sep_milliers(budget)} €")
 
 # mensualité d'assurance / mensualité du crédit
 tx_assurance_actuelle = 16.07 / MONTANT_REMBOURSÉ_PAR_MOIS
 coût_assurance = tx_assurance_actuelle * mensualité_maximale * 12 * select_nb_années_pr_rembourser
 budget -= coût_assurance
-st.markdown(f"* Le coût de l'assurance emprunteur : {sep_milliers(budget, 0)} €")
+st.markdown(f"* Le coût de l'assurance emprunteur : {sep_milliers(budget)} €")
 
 frais_de_notaire = 0.08 if select_neuf_ancien == 'Ancien' else 0.03
 frais_de_notaire *= budget
 budget -= frais_de_notaire
-st.markdown(f"* Les frais de notaire : {sep_milliers(budget, 0)} €")
+st.markdown(f"* Les frais de notaire : {sep_milliers(budget)} €")
 
 if select_avec_vente_appartement:
     budget -= (select_tx_frais_agence * prix_estimé_revente)
     st.markdown(
         "* Les frais d'agence sur la revente de l'appartement de Cachan : "
-        f'{sep_milliers(budget, 0)} €'
+        f'{sep_milliers(budget)} €'
     )
 
 if not select_remb_anticipé_gratuit:
     budget -= indemnités_de_remb_par_anticipation
     st.markdown(
         "* Les indemnités de remboursement par anticipation : "
-        f'{sep_milliers(budget, 0)} €.'
+        f'{sep_milliers(budget)} €.'
     )
 
 budget -= 1000
-st.markdown(f'* Les frais de dossier bancaire : {sep_milliers(budget, 0)} €')
+st.markdown(f'* Les frais de dossier bancaire : {sep_milliers(budget)} €')
 
-st.markdown(f'**➜ Soit un prix final maximum de : {sep_milliers(budget, 0)} €**')
+st.markdown(f'**➜ Soit un prix final maximum de : {sep_milliers(budget)} €**')
 st.markdown('-' * 3)
 
 
 st.markdown(
     'Pour être exhaustive, cette simulation devrait aussi tenir compte '
-    'des gros impacts sur nos finances (le ravalement, les JO 2024, etc.)'
+    'des gros impacts sur nos finances : le ravalement, les JO 2024, un mariage, etc.'
 )
-
+st.markdown(
+    f'Une marge de sécurité est conservée par Lisa à hauteur de {sep_milliers(SECURITE_LISA)} €.'
+)
 # Autres composantes du TAEG :
 # Frais payés ou dus à des intermédiaires intervenus dans l'octroi du prêt (courtier par exemple)
 # Frais de garanties (hypothèque ou cautionnement)
 # Frais d'évaluation du bien immobilier (payés à un agent immobilier)
 # Tous les autres frais qui vous sont imposés pour l'obtention du crédit :
 # frais de tenue de compte, si obligation d'ouverture de compte dans la banque qui octroie le prêt
-
-# La banque ne prend-elle pas en compte nos futures charges à Rueil, ni celles que j'ai
-# actuellement (215€ / mois) ?
 
 # TODO : vf que pour un euro d'emprunt supplémentaire, ça passe plus (mensualité > mensualité max)
 # Carte des prix DVF

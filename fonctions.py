@@ -5,21 +5,21 @@ import numpy as np
 
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_appart = {
-    'RUEIL-MALMAISON': 0.112,
-    'HOUILLES': 0.158,
-    'VÉSINET': 0.121,
-    'MAISONS-LAFFITTE': 0.121,
     'CACHAN': 0.15,
+    'HOUILLES': 0.158,
+    'MAISONS-LAFFITTE': 0.121,
+    'RUEIL-MALMAISON': 0.112,
+    'VÉSINET': 0.121,
     'SAINT-GERMAIN EN LAYE': 0.206
 }
 
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_maison = {
-    'RUEIL-MALMAISON': 0.096,
-    'HOUILLES': 0.150,
-    'VÉSINET': 0.188,
-    'MAISONS-LAFFITTE': 0.145,
     'CACHAN': 0.223,
+    'HOUILLES': 0.150,
+    'MAISONS-LAFFITTE': 0.145,
+    'RUEIL-MALMAISON': 0.096,
+    'VÉSINET': 0.188,
     'SAINT-GERMAIN EN LAYE': 0.114
 }
 
@@ -55,7 +55,7 @@ def get_mt_emprunt_max(mensualité_max, tx_nominal, nb_mois):
 assert round(get_mt_emprunt_max(1164, 0.02, 20 * 12)) == 230_093  # ~230K
 
 
-def sep_milliers(nb, nb_dec=2):
+def sep_milliers(nb, nb_dec=0):
     """
     Usage :
     >>> sep_milliers(1254839.1245) --> '1 254 839.12'
