@@ -1,7 +1,8 @@
 """Ce script contient les fonctions utilisées par l'application"""
 import datetime
 import numpy as np
-
+import base64
+from pathlib import Path
 
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_appart = {
@@ -88,3 +89,9 @@ def montant_qui_sera_remboursé_à_date(
     nb_mois_depuis_début_du_prêt = round((date - date_début_du_prêt_existant).days / 30.5)
     montant_qui_sera_remboursé = nb_mois_depuis_début_du_prêt * mt_remboursé_par_mois
     return montant_qui_sera_remboursé
+
+
+def img_to_bytes(img_path):
+    img_bytes = Path(img_path).read_bytes()
+    encoded = base64.b64encode(img_bytes).decode()
+    return encoded
