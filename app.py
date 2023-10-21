@@ -50,8 +50,20 @@ st.set_page_config(
 
 st.header("🏠  Estimation logement 2028")
 
+
+@st.cache_data()
+def md_from_title_and_img(title: str, img_path: str):
+    img64 = img_to_bytes(img_path)
+    size = 28 if img_path != 'tirelire.png' else 35
+    width = f'width={size} height={size}'
+    return f"""## <img src='data:image/png;base64,{img64}' class='img-fluid' {width}>  {title}"""
+
+
 st.sidebar.markdown(
-    """## [<img src='data:image/png;base64,{}' class='img-fluid' width=28 height=28>](https://streamlit.io/)  Type d'appartement""".format(img_to_bytes("logo.png")), unsafe_allow_html=True)
+    md_from_title_and_img("Type d'appartement", 'logo.png'),
+    unsafe_allow_html=True
+)
+
 select_ville = st.sidebar.selectbox(
     'Ville', sorted(lieu_to_inflation_maison.keys()),
     index=sorted(lieu_to_inflation_appart).index('RUEIL-MALMAISON')
@@ -62,8 +74,10 @@ select_appart_ou_maison = st.sidebar.selectbox(
 select_neuf_ancien = st.sidebar.selectbox('Neuf ou ancien', ['Ancien', 'Neuf'])
 select_date_achat = st.sidebar.date_input('Date achat futur logement', datetime.date(2028, 1, 1))
 
+
 st.sidebar.markdown(
-    """## [<img src='data:image/png;base64,{}' class='img-fluid' width=28 height=28>](https://streamlit.io/)  Emprunt""".format(img_to_bytes("bnp-paribas.jpg")), unsafe_allow_html=True
+    md_from_title_and_img("Emprunt", 'bnp-paribas.jpg'),
+    unsafe_allow_html=True
 )
 select_avec_vente_appartement = st.sidebar.checkbox(
     "Avec vente appartement de Cachan", True
@@ -79,7 +93,8 @@ select_remb_anticipé_gratuit = st.sidebar.checkbox(
 select_tx_nominal = st.sidebar.slider(
     "[Taux nominal public]"
     "(https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)",
-    0.01, 0.05, 0.04, step=0.01  # TAUX_CRÉDITS_PUBLIC = 0.04
+    1., 5., 4.5, step=0.5
+    # source : https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html
 )
 select_tx_frais_agence = st.sidebar.slider(
     "[Frais d'agence]"
@@ -92,7 +107,8 @@ select_nb_années_pr_rembourser = st.sidebar.slider(
 )
 
 st.sidebar.markdown(
-    """## [<img src='data:image/png;base64,{}' class='img-fluid' width=35 height=35>](https://streamlit.io/)  Apports""".format(img_to_bytes("tirelire.png")), unsafe_allow_html=True
+    md_from_title_and_img("Apports", 'tirelire.png'),
+    unsafe_allow_html=True
 )
 select_gain_mensuel_pde = st.sidebar.slider(
     'Gain mensuel Pierre',
@@ -173,7 +189,7 @@ capacité_max_emprunt_pde = mensualité_max_pde * select_nb_années_pr_rembourse
 mensualité_max_lvo = TAUX_MAX_ENDETTEMENT * select_w_mensuel_lvo_date_achat
 capacité_max_emprunt_lvo = mensualité_max_lvo * select_nb_années_pr_rembourser
 
-tx_nominal = select_tx_nominal
+tx_nominal = select_tx_nominal / 100
 if select_avec_crédit_BNP:
     tx_nominal *= 0.6
 
