@@ -6,6 +6,7 @@ Sources :
 - https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html
 - https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf
 - https://fr.luko.eu/conseils/guide/taux-endettement-maximum/
+- https://app.dvf.etalab.gouv.fr
 """
 import datetime
 import streamlit as st
@@ -261,7 +262,7 @@ if not select_remb_anticipé_gratuit:
     budget -= indemnités_de_remb_par_anticipation
     st.markdown(
         "* Les indemnités de remboursement par anticipation : "
-        f'{sep_milliers(budget)} €.'
+        f'{sep_milliers(budget)} €'
     )
 
 budget -= 1000
@@ -273,19 +274,20 @@ st.markdown('-' * 3)
 
 st.markdown(
     'Pour être exhaustive, cette simulation devrait aussi tenir compte '
-    'des gros impacts sur nos finances : le ravalement, les JO 2024, un mariage, etc.'
+    'des gros impacts sur nos finances : le ravalement, les JO 2024, un mariage, des voyages, etc.'
 )
 st.markdown(
     f'Une marge de sécurité est conservée par Lisa à hauteur de {sep_milliers(SECURITE_LISA)} €.'
 )
 
-st.markdown("Cette simulation ne tient pas compte des 30% de réduction sur l'assurance emprunteur.")
-# Autres composantes du TAEG :
-# Frais payés ou dus à des intermédiaires intervenus dans l'octroi du prêt (courtier par exemple)
-# Frais de garanties (hypothèque ou cautionnement)
-# Frais d'évaluation du bien immobilier (payés à un agent immobilier)
-# Tous les autres frais qui vous sont imposés pour l'obtention du crédit :
-# frais de tenue de compte, si obligation d'ouverture de compte dans la banque qui octroie le prêt
+st.markdown(
+    """
+    Cette simulation ne tient pas compte :
+    * des 30% de réduction sur l'assurance emprunteur,
+    * des éventuels frais de courtage,
+    * des éventuels frais de tenue de compte en cas d'ouverture de compte dans une banque,
+    * des éventuels frais de garanties (hypothèque ou cautionnement)
+    """
+)
 
 # TODO : vf que pour un euro d'emprunt supplémentaire, ça passe plus (mensualité > mensualité max)
-# Carte des prix DVF
