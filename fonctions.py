@@ -7,6 +7,7 @@ from pathlib import Path
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_appart = {
     'CACHAN': 0.15,
+    'CHATOU': 0.112,
     'HOUILLES': 0.158,
     'MAISONS-LAFFITTE': 0.121,
     'RUEIL-MALMAISON': 0.112,
@@ -17,6 +18,7 @@ lieu_to_inflation_appart = {
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_maison = {
     'CACHAN': 0.223,
+    'CHATOU': 0.161,
     'HOUILLES': 0.150,
     'MAISONS-LAFFITTE': 0.145,
     'RUEIL-MALMAISON': 0.096,

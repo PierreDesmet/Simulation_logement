@@ -86,7 +86,7 @@ select_avec_vente_appartement = st.sidebar.checkbox(
 select_avec_crédit_BNP = st.sidebar.checkbox("Avec taux avantageux BNP", True)
 select_prise_en_compte_du_variable = st.sidebar.checkbox("Avec prise en compte du variable", True)
 select_prise_en_compte_participation_interessement = st.sidebar.checkbox(
-    "Avec prise en compte de la participation et de l'intéressement", True
+    "Avec prise en compte de la participation et de l'intéressement", False
 )
 select_remb_anticipé_gratuit = st.sidebar.checkbox(
     "Avec clause de remboursement anticipée gratuite", False
@@ -94,7 +94,7 @@ select_remb_anticipé_gratuit = st.sidebar.checkbox(
 select_tx_nominal = st.sidebar.slider(
     "[Taux nominal public]"
     "(https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)",
-    1., 5., 4.5, step=0.5
+    1., 5., 4.5, step=0.1  # "Bon taux"
     # source : https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html
 )
 select_tx_frais_agence = st.sidebar.slider(
@@ -113,7 +113,7 @@ st.sidebar.markdown(
 )
 select_gain_mensuel_pde = st.sidebar.slider(
     'Gain mensuel Pierre',
-    min_value=1000, max_value=2500, value=1300, step=100
+    min_value=1000, max_value=2500, value=1600, step=100
 )
 
 select_gain_mensuel_lvo = st.sidebar.slider(
@@ -122,7 +122,7 @@ select_gain_mensuel_lvo = st.sidebar.slider(
 )
 select_apport_actuel_pde = st.sidebar.slider(
     'Apport actuel Pierre',
-    min_value=20_000, max_value=150_000, value=50_000, step=5000
+    min_value=20_000, max_value=150_000, value=60_000, step=5000
 )
 apport_lvo_actuel_default = int(
     select_gain_mensuel_lvo * nb_mois_depuis_que_lisa_économise() - SECURITE_LISA
@@ -134,12 +134,16 @@ select_apport_actuel_lvo = st.sidebar.slider(
 select_w_mensuel_pde_date_achat = st.sidebar.slider(
     "Salaire mensuel net av. impôt Pierre à date d'achat",
     min_value=3000, max_value=5000, value=4200, step=100
-)  # En sept. 2023, 3624 * 13 / 12 = 3930 de mensuel net avant impôt
+)
+# En sept. 2023, 3624 * 13 / 12 = 3930 de mensuel net avant impôt
+# En avril 2024, augmentation du fixe de 700€ (ou 800 ?)
+
 select_w_mensuel_lvo_date_achat = st.sidebar.slider(
     "Salaire mensuel net av. impôt Lisa à date d'achat",
-    min_value=3000, max_value=5000, value=3300
-)  # En 2023, 36 174 € / 12 = 3015€ de mensuel net avant impôt
-
+    min_value=3000, max_value=5000, value=3500
+)
+# En 2023, 36 174 € / 12 = 3015€ de mensuel net avant impôt
+# En 2024, (salaire brut = 46 000 * 1,07) * (PS -> 0.8) * (1 / 12) = 3280
 
 # Les dépendances
 nb_mois_restants_avant_achat = round(
@@ -176,7 +180,7 @@ montant_total_qui_sera_apporté = apport_qui_sera_apporté_pde + apport_qui_sera
 # calcul du taux d'endettement à hauteur de 70% :
 # https://fr.luko.eu/conseils/guide/taux-endettement-maximum/
 # 1200 € : le montant que je peux mettre en location, charges comprises (source SeLoger)
-# Hypothèse pessimiste : l'établissement bancaire retire les charges de copropriété de 
+# Hypothèse pessimiste : l'établissement bancaire retire les charges de copropriété de
 # mes revenus fonciers dans le calcul du taux d'endettement. C'est plutôt rare, cf ChatGPT.
 mensualité_max_pde = TAUX_MAX_ENDETTEMENT * (
     select_w_mensuel_pde_date_achat +
@@ -192,7 +196,8 @@ capacité_max_emprunt_lvo = mensualité_max_lvo * select_nb_années_pr_rembourse
 
 tx_nominal = select_tx_nominal / 100
 if select_avec_crédit_BNP:
-    tx_nominal *= 0.6
+    # quand un "Bon taux" nominal est en IDF sur 25 ans de 4.5%, BNP est à 3.23
+    tx_nominal *= (3.23 / 4.5)
 
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 st.markdown(
