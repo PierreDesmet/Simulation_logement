@@ -43,6 +43,7 @@ DURÉE_MAX_CRÉDIT_EN_MOIS = 25 * 12
 
 PARTICIPATION_INTERESSEMENT = (1069 + 1003) * (12 / 4)  # prorata de présence 2022, montant annuel
 W_VARIABLE = (2000 + 1000) * (12 / 4)  # prorata de présence 2022, montant annuel
+TAUX_NOMINAL_PUBLIC, TAUX_NOMINAL_BNP = 4.13, 3.22
 
 st.set_page_config(
     page_title='Estimation logement',
@@ -91,16 +92,23 @@ select_prise_en_compte_participation_interessement = st.sidebar.checkbox(
 select_remb_anticipé_gratuit = st.sidebar.checkbox(
     "Avec clause de remboursement anticipée gratuite", False
 )
+if select_avec_crédit_BNP:
+    légende = 'Taux nominal BNP'
+    default = TAUX_NOMINAL_BNP
+else:
+    légende = (
+        "[Taux nominal public]"
+        "(https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)"
+    )
+    default = TAUX_NOMINAL_PUBLIC
 select_tx_nominal = st.sidebar.slider(
-    "[Taux nominal public]"
-    "(https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)",
-    1., 5., 4.1, step=0.1  # "Bon taux"
+    légende, 1., 5., default, step=0.05  # "Bon taux"
     # source : https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html
 )
 select_tx_frais_agence = st.sidebar.slider(
     "[Frais d'agence]"
     "(https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf)",
-    0.02, 0.06, 0.05
+    3.0, 6.0, 4.5, step=0.5
 )
 select_nb_années_pr_rembourser = st.sidebar.slider(
     "Nombre d'années pour rembourser",
@@ -195,9 +203,7 @@ mensualité_max_lvo = TAUX_MAX_ENDETTEMENT * select_w_mensuel_lvo_date_achat
 capacité_max_emprunt_lvo = mensualité_max_lvo * select_nb_années_pr_rembourser
 
 tx_nominal = select_tx_nominal / 100
-if select_avec_crédit_BNP:
-    # quand un "Bon taux" nominal est en IDF sur 25 ans de 4.5%, BNP est à 3.23
-    tx_nominal *= (3.23 / 4.5)
+select_tx_frais_agence /= 100
 
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 st.markdown(
