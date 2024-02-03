@@ -6,24 +6,24 @@ from pathlib import Path
 
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_appart = {
-    'CACHAN': 0.15,
-    'CHATOU': 0.112,
-    'HOUILLES': 0.158,
-    'MAISONS-LAFFITTE': 0.121,
-    'RUEIL-MALMAISON': 0.112,
-    'VÉSINET': 0.121,
-    'SAINT-GERMAIN EN LAYE': 0.206
+    'CACHAN': -0.023,
+    'CHATOU': 0.052,
+    'HOUILLES': 0.097,
+    'MAISONS-LAFFITTE': 0.01,
+    'RUEIL-MALMAISON': 0.005,
+    'VÉSINET': 0.001,
+    'SAINT-GERMAIN EN LAYE': 0.201
 }
 
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_maison = {
-    'CACHAN': 0.223,
-    'CHATOU': 0.161,
-    'HOUILLES': 0.150,
-    'MAISONS-LAFFITTE': 0.145,
-    'RUEIL-MALMAISON': 0.096,
-    'VÉSINET': 0.188,
-    'SAINT-GERMAIN EN LAYE': 0.114
+    'CACHAN': 0.08,
+    'CHATOU': 0.178,
+    'HOUILLES': 0.178,
+    'MAISONS-LAFFITTE': 0.274,
+    'RUEIL-MALMAISON': 0.078,
+    'VÉSINET': 0.141,
+    'SAINT-GERMAIN EN LAYE': 0.054
 }
 
 

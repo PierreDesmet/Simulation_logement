@@ -23,7 +23,7 @@ from fonctions import (
 )
 
 # Hypothèses
-SECURITE_LISA = 15_000
+SECURITE_LISA = 10_000
 
 # Appartement actuel à Cachan
 TX_LBP = 0.9
@@ -94,7 +94,7 @@ select_remb_anticipé_gratuit = st.sidebar.checkbox(
 select_tx_nominal = st.sidebar.slider(
     "[Taux nominal public]"
     "(https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)",
-    1., 5., 4.5, step=0.1  # "Bon taux"
+    1., 5., 4.1, step=0.1  # "Bon taux"
     # source : https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html
 )
 select_tx_frais_agence = st.sidebar.slider(
@@ -279,7 +279,9 @@ st.markdown('-' * 3)
 
 st.markdown(
     'Pour être exhaustive, cette simulation devrait aussi tenir compte '
-    'des gros impacts sur nos finances : le ravalement, les JO 2024, un mariage, des voyages, etc.'
+    'des gros impacts sur nos finances :\n'
+    '* le ravalement, un mariage, des voyages, etc.\n'
+    '* un héritage, les JO 2024, etc.'
 )
 st.markdown(
     f'Une marge de sécurité est conservée par Lisa à hauteur de {sep_milliers(SECURITE_LISA)} €.'
