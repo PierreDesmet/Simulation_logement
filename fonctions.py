@@ -26,6 +26,16 @@ lieu_to_inflation_maison = {
     'SAINT-GERMAIN EN LAYE': 0.054
 }
 
+lieu_to_url_meilleurs_agents = {
+    'CACHAN': 'cachan-94230',
+    'CHATOU': 'chatou-78400',
+    'HOUILLES': 'houilles-78800',
+    'MAISONS-LAFFITTE': 'maisons-laffitte-78600',
+    'RUEIL-MALMAISON': 'rueil-malmaison-92500',
+    'VÉSINET': 'le-vesinet-78110',
+    'SAINT-GERMAIN EN LAYE': 'saint-germain-en-laye-78100'
+}
+
 
 def get_mt_mensualités(mt_emprunt: float, tx_nominal: float, nb_mois: int):
     """

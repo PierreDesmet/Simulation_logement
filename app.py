@@ -1,5 +1,8 @@
 """
-Simulateur du montant que pourra coûter notre futur logis à Lisa et moi
+Simulateur du montant que pourra coûter notre futur logement à Lisa et moi
+
+$ source /Users/pierredesmet/miniconda3/envs/pierrou_env/bin/activate
+$ streamlit run app.py
 
 Sources :
 - https://www.service-public.fr/particuliers/vosdroits/F2456
@@ -15,6 +18,7 @@ from PIL import Image
 from fonctions import (
     lieu_to_inflation_appart,
     lieu_to_inflation_maison,
+    lieu_to_url_meilleurs_agents,
     get_mt_emprunt_max,
     sep_milliers,
     nb_mois_depuis_que_lisa_économise,
@@ -43,14 +47,14 @@ DURÉE_MAX_CRÉDIT_EN_MOIS = 25 * 12
 
 PARTICIPATION_INTERESSEMENT = (1069 + 1003) * (12 / 4)  # prorata de présence 2022, montant annuel
 W_VARIABLE = (2000 + 1000) * (12 / 4)  # prorata de présence 2022, montant annuel
-TAUX_NOMINAL_PUBLIC, TAUX_NOMINAL_BNP = 4.13, 3.22
+TAUX_NOMINAL_PUBLIC, TAUX_NOMINAL_BNP = 4.09, 3.22
 
 st.set_page_config(
     page_title='Estimation logement',
     page_icon=Image.open("logo.png")
 )
 
-st.header("🏠  Estimation logement 2028")
+st.header("🏠  Estimation logement 2029")
 
 
 @st.cache_data()
@@ -74,7 +78,7 @@ select_appart_ou_maison = st.sidebar.selectbox(
     'Appartement ou maison', ['Appartement', 'Maison']
 )
 select_neuf_ancien = st.sidebar.selectbox('Neuf ou ancien', ['Ancien', 'Neuf'])
-select_date_achat = st.sidebar.date_input('Date achat futur logement', datetime.date(2028, 1, 1))
+select_date_achat = st.sidebar.date_input('Date achat futur logement', datetime.date(2029, 1, 1))
 
 
 st.sidebar.markdown(
@@ -93,11 +97,11 @@ select_remb_anticipé_gratuit = st.sidebar.checkbox(
     "Avec clause de remboursement anticipée gratuite", False
 )
 if select_avec_crédit_BNP:
-    légende = 'Taux nominal BNP'
+    légende = 'Taux nominal BNP en %'
     default = TAUX_NOMINAL_BNP
 else:
     légende = (
-        "[Taux nominal public]"
+        "[Taux nominal public en %]"
         "(https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)"
     )
     default = TAUX_NOMINAL_PUBLIC
@@ -106,7 +110,7 @@ select_tx_nominal = st.sidebar.slider(
     # source : https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html
 )
 select_tx_frais_agence = st.sidebar.slider(
-    "[Frais d'agence]"
+    "[Frais d'agence en %]"
     "(https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf)",
     3.0, 6.0, 4.5, step=0.5
 )
@@ -130,7 +134,7 @@ select_gain_mensuel_lvo = st.sidebar.slider(
 )
 select_apport_actuel_pde = st.sidebar.slider(
     'Apport actuel Pierre',
-    min_value=20_000, max_value=150_000, value=60_000, step=5000
+    min_value=20_000, max_value=150_000, value=50_000, step=5000
 )
 apport_lvo_actuel_default = int(
     select_gain_mensuel_lvo * nb_mois_depuis_que_lisa_économise() - SECURITE_LISA
@@ -241,15 +245,21 @@ inflation_temps_restant_avant_achat = (
     (nb_mois_restants_avant_achat / 12) / 5
 ) * lieu_to_inflation[select_ville]
 budget = round(budget / (1 + inflation_temps_restant_avant_achat))
+url_meilleurs_agents = lieu_to_url_meilleurs_agents[select_ville]
 st.markdown(
-    f"* L'inflation ({lieu_to_inflation[select_ville]:.2%} en 5 ans à {select_ville}) : "
+    f"* [L'inflation](https://www.meilleursagents.com/prix-immobilier/{url_meilleurs_agents}/)"
+    f" ({lieu_to_inflation[select_ville]:.2%} en 5 ans à {select_ville}) : "
     f'{sep_milliers(budget)} €'
 )
 
 
 coût_crédit = mensualité_maximale * 12 * select_nb_années_pr_rembourser - mt_emprunt_max
 budget -= coût_crédit
-st.markdown(f"* Le coût du crédit (hors assurance) : {sep_milliers(budget)} €")
+if select_avec_crédit_BNP:
+    prefix = "* [Le coût du crédit ](https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)"
+else:
+    prefix = '* Le coût du crédit '
+st.markdown(prefix + f"(hors assurance) : {sep_milliers(budget)} €")
 
 # mensualité d'assurance / mensualité du crédit
 tx_assurance_actuelle = 16.07 / MONTANT_REMBOURSÉ_PAR_MOIS
@@ -257,7 +267,7 @@ coût_assurance = tx_assurance_actuelle * mensualité_maximale * 12 * select_nb_
 budget -= coût_assurance
 st.markdown(f"* Le coût de l'assurance emprunteur : {sep_milliers(budget)} €")
 
-frais_de_notaire = 0.08 if select_neuf_ancien == 'Ancien' else 0.03
+frais_de_notaire = 0.075 if select_neuf_ancien == 'Ancien' else 0.03
 frais_de_notaire *= budget
 budget -= frais_de_notaire
 st.markdown(f"* Les frais de notaire : {sep_milliers(budget)} €")
@@ -265,7 +275,7 @@ st.markdown(f"* Les frais de notaire : {sep_milliers(budget)} €")
 if select_avec_vente_appartement:
     budget -= (select_tx_frais_agence * prix_estimé_revente)
     st.markdown(
-        "* Les frais d'agence sur la revente de l'appartement de Cachan : "
+        "* Les [frais d'agence](https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf) sur la revente de l'appartement de Cachan : "
         f'{sep_milliers(budget)} €'
     )
 
