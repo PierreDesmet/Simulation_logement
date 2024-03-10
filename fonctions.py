@@ -4,26 +4,29 @@ import numpy as np
 import base64
 from pathlib import Path
 
+taux_BNP = {
+    15: 0.0281,
+    20: 0.0287,
+    25: 0.0289
+}
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_appart = {
-    'CACHAN': -0.023,
-    'CHATOU': 0.052,
-    'HOUILLES': 0.097,
-    'MAISONS-LAFFITTE': 0.01,
-    'RUEIL-MALMAISON': 0.005,
-    'VÉSINET': 0.001,
-    'SAINT-GERMAIN EN LAYE': 0.201
+    'CACHAN': -0.004,
+    'CHATOU': 0.021,
+    'MAISONS-LAFFITTE': -0.017,
+    'RUEIL-MALMAISON': 0.032,
+    'VÉSINET': -0.017,
+    'SAINT-GERMAIN EN LAYE': 0.232
 }
 
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_maison = {
-    'CACHAN': 0.08,
-    'CHATOU': 0.178,
-    'HOUILLES': 0.178,
-    'MAISONS-LAFFITTE': 0.274,
-    'RUEIL-MALMAISON': 0.078,
-    'VÉSINET': 0.141,
-    'SAINT-GERMAIN EN LAYE': 0.054
+    'CACHAN': 0.073,
+    'CHATOU': 0.129,
+    'MAISONS-LAFFITTE': 0.191,
+    'RUEIL-MALMAISON': 0.051,
+    'VÉSINET': 0.149,
+    'SAINT-GERMAIN EN LAYE': 0.129
 }
 
 lieu_to_url_meilleurs_agents = {

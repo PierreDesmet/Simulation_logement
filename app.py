@@ -4,14 +4,28 @@ Simulateur du montant que pourra coûter notre futur logement à Lisa et moi
 $ source /Users/pierredesmet/miniconda3/envs/pierrou_env/bin/activate
 $ streamlit run app.py
 
+Réflexion sur le PEL, pour un souscription en janvier 2024 :
+    Taux **d'intérêt** du compte = 2.25 %
+    Taux du **prêt** : 3.45 %
+    Pour être intéressant, le PEL doit avoir un taux plus intéressant que
+    le taux BNP au moment de l'achat. On a :
+      taux_emprunt_BNP ~ 0.7 * taux_nominal_public, et
+      taux_emprunt_PEL = 0.0345
+    Donc pour que le PEL soit intéressant, il faut qu'au moment de l'achat :
+    taux_nominal_public > 0.0345 / 0.7, càd que le taux nominal public dépasse le 4.93 %...
+    ce qui est très rarement arrivé :
+    https://www.lesfurets.com/pret-immobilier/barometre-taux/votre-taux)
+
 Sources :
 - https://www.service-public.fr/particuliers/vosdroits/F2456
 - https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html
 - https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf
 - https://fr.luko.eu/conseils/guide/taux-endettement-maximum/
 - https://app.dvf.etalab.gouv.fr
+- PEL : https://www.service-public.fr/particuliers/vosdroits/F16140
 """
 import datetime
+import numpy as np
 import streamlit as st
 from PIL import Image
 
@@ -23,7 +37,8 @@ from fonctions import (
     sep_milliers,
     nb_mois_depuis_que_lisa_économise,
     montant_qui_sera_remboursé_à_date,
-    img_to_bytes
+    img_to_bytes,
+    taux_BNP
 )
 
 # Hypothèses
@@ -47,7 +62,7 @@ DURÉE_MAX_CRÉDIT_EN_MOIS = 25 * 12
 
 PARTICIPATION_INTERESSEMENT = (1069 + 1003) * (12 / 4)  # prorata de présence 2022, montant annuel
 W_VARIABLE = (2000 + 1000) * (12 / 4)  # prorata de présence 2022, montant annuel
-TAUX_NOMINAL_PUBLIC, TAUX_NOMINAL_BNP = 4.09, 3.22
+TAUX_NOMINAL_PUBLIC = 4.1
 
 st.set_page_config(
     page_title='Estimation logement',
@@ -96,9 +111,15 @@ select_prise_en_compte_participation_interessement = st.sidebar.checkbox(
 select_remb_anticipé_gratuit = st.sidebar.checkbox(
     "Avec clause de remboursement anticipée gratuite", False
 )
+
+select_nb_années_pr_rembourser = st.sidebar.slider(
+    "Nombre d'années pour rembourser",
+    min_value=15, max_value=30, value=25, step=5
+)
+
 if select_avec_crédit_BNP:
     légende = 'Taux nominal BNP en %'
-    default = TAUX_NOMINAL_BNP
+    default = taux_BNP[select_nb_années_pr_rembourser] * 100
 else:
     légende = (
         "[Taux nominal public en %]"
@@ -114,10 +135,7 @@ select_tx_frais_agence = st.sidebar.slider(
     "(https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf)",
     3.0, 6.0, 4.5, step=0.5
 )
-select_nb_années_pr_rembourser = st.sidebar.slider(
-    "Nombre d'années pour rembourser",
-    min_value=15, max_value=30, value=25, step=5
-)
+
 
 st.sidebar.markdown(
     md_from_title_and_img("Apports", 'tirelire.png'),
@@ -161,12 +179,20 @@ select_w_mensuel_lvo_date_achat = st.sidebar.slider(
 nb_mois_restants_avant_achat = round(
     (select_date_achat - datetime.date.today()).days / 30.5
 )
+nb_années_restantes_avant_achat = nb_mois_restants_avant_achat / 12
 montant_qui_sera_remboursé = montant_qui_sera_remboursé_à_date(
     date_début_du_prêt_existant=DATE_DÉBUT_DU_PRÊT_EXISTANT,
     mt_remboursé_par_mois=MONTANT_REMBOURSÉ_PAR_MOIS,
     date=select_date_achat
 )
-prix_estimé_revente = PRIX_APPARTEMENT_CACHAN * (1 + lieu_to_inflation_appart['CACHAN'])
+
+sign = np.sign(lieu_to_inflation_appart['CACHAN'])
+inflation_annuelle_cachan = abs(lieu_to_inflation_appart['CACHAN']) ** (1 / 5)
+inflation_cachan_avant_achat = sign * (
+    inflation_annuelle_cachan ** nb_années_restantes_avant_achat
+)
+prix_estimé_revente = PRIX_APPARTEMENT_CACHAN * (1 + inflation_cachan_avant_achat)
+
 CRD = MONTANT_EMPRUNTE - montant_qui_sera_remboursé
 # Source : pdf des conditions générales LBP
 indemnités_de_remb_par_anticipation = min(
@@ -230,7 +256,8 @@ budget = montant_total_qui_sera_apporté + mt_emprunt_max
 phrase = f'Notre apport est de {sep_milliers(montant_total_qui_sera_apporté)} €'
 if select_avec_vente_appartement:
     phrase += (
-        f", dont {sep_milliers(solde_revente)} € liés à la revente de l'appartement de Cachan"
+        f", dont {sep_milliers(solde_revente)} € liés à la revente de l'appartement de Cachan "
+        f"(prix de revente estimé à {sep_milliers(prix_estimé_revente)} €)"
     )
 st.markdown(phrase + '.')
 
@@ -241,9 +268,10 @@ lieu_to_inflation = (
     lieu_to_inflation_appart if select_appart_ou_maison == 'Appartement'
     else lieu_to_inflation_maison
 )
+inflation_par_an_les_5_dernières_années = lieu_to_inflation[select_ville] ** (1 / 5)
 inflation_temps_restant_avant_achat = (
-    (nb_mois_restants_avant_achat / 12) / 5
-) * lieu_to_inflation[select_ville]
+    inflation_par_an_les_5_dernières_années ** nb_années_restantes_avant_achat
+)
 budget = round(budget / (1 + inflation_temps_restant_avant_achat))
 url_meilleurs_agents = lieu_to_url_meilleurs_agents[select_ville]
 st.markdown(
@@ -256,7 +284,10 @@ st.markdown(
 coût_crédit = mensualité_maximale * 12 * select_nb_années_pr_rembourser - mt_emprunt_max
 budget -= coût_crédit
 if select_avec_crédit_BNP:
-    prefix = "* [Le coût du crédit ](https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)"
+    prefix = (
+        "* [Le coût du crédit ]"
+        "(https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)"
+    )
 else:
     prefix = '* Le coût du crédit '
 st.markdown(prefix + f"(hors assurance) : {sep_milliers(budget)} €")
@@ -275,7 +306,9 @@ st.markdown(f"* Les frais de notaire : {sep_milliers(budget)} €")
 if select_avec_vente_appartement:
     budget -= (select_tx_frais_agence * prix_estimé_revente)
     st.markdown(
-        "* Les [frais d'agence](https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf) sur la revente de l'appartement de Cachan : "
+        "* Les [frais d'agence]"
+        "(https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf) "
+        "sur la revente de l'appartement de Cachan : "
         f'{sep_milliers(budget)} €'
     )
 
@@ -310,7 +343,17 @@ st.markdown(
     * des éventuels frais de courtage,
     * des éventuels frais de tenue de compte en cas d'ouverture de compte dans une banque,
     * des éventuels frais de garanties (hypothèque ou cautionnement)
+    * du taux d'emprunt PEL potentiellement plus avantageux que le taux d'emprunt BNP
+
+    Hypothèses prises :
+    * Pour prédire l'inflation, on a estimé l'inflation moyenne dans la ville
+    sur les 5 dernières années, et projeté ce taux d'inflation sur le temps restant avant achat.
+    * En cas de revente de mon appartement, on suppose que la vente a lieu en même temps que
+    l'achat du futur logement.
     """
 )
 
-# TODO : vf que pour un euro d'emprunt supplémentaire, ça passe plus (mensualité > mensualité max)
+# TODO :
+# refactoring
+# intégrer le PEL (?)
+# vf que pour un euro d'emprunt supplémentaire, ça passe plus (mensualité > mensualité max)
