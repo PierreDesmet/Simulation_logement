@@ -60,7 +60,9 @@ TAUX_MAX_ENDETTEMENT = 0.35  # assurance comprise
 # des crédits immobiliers"
 DURÉE_MAX_CRÉDIT_EN_MOIS = 25 * 12
 
-PARTICIPATION_INTERESSEMENT = (1069 + 1003) * (12 / 4)  # prorata de présence 2022, montant annuel
+PARTICIPATION = 3122.84  # montant pour 2023
+INTERESSEMENT = 3000  # montant pour 2023
+PARTICIPATION_INTERESSEMENT = PARTICIPATION + INTERESSEMENT
 W_VARIABLE = (2000 + 1000) * (12 / 4)  # prorata de présence 2022, montant annuel
 TAUX_NOMINAL_PUBLIC = 4.1
 
@@ -152,7 +154,7 @@ select_gain_mensuel_lvo = st.sidebar.slider(
 )
 select_apport_actuel_pde = st.sidebar.slider(
     'Apport actuel Pierre',
-    min_value=20_000, max_value=150_000, value=50_000, step=5000
+    min_value=20_000, max_value=150_000, value=60_000, step=5000
 )
 apport_lvo_actuel_default = int(
     select_gain_mensuel_lvo * nb_mois_depuis_que_lisa_économise() - SECURITE_LISA
@@ -329,7 +331,7 @@ st.markdown('-' * 3)
 st.markdown(
     'Pour être exhaustive, cette simulation devrait aussi tenir compte '
     'des gros impacts sur nos finances :\n'
-    '* le ravalement, un mariage, des voyages, etc.\n'
+    '* un enfant, le ravalement, un mariage, des voyages, etc.\n'
     '* un héritage, les JO 2024, etc.'
 )
 st.markdown(

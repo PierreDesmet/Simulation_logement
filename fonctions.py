@@ -1,8 +1,10 @@
 """Ce script contient les fonctions utilisées par l'application"""
 import datetime
 import numpy as np
+import pandas as pd
 import base64
 from pathlib import Path
+
 
 taux_BNP = {
     15: 0.0281,
@@ -110,3 +112,20 @@ def img_to_bytes(img_path):
     img_bytes = Path(img_path).read_bytes()
     encoded = base64.b64encode(img_bytes).decode()
     return encoded
+
+
+def get_mt_prêt_et_mensualité_du_PEL(
+    mt_intérêts_acquis_PEL=1000, durée_du_prêt_PEL=5
+) -> tuple([float, float]):
+    converters = {str(i): (lambda x: float(x.replace(',', '.'))) for i in range(2, 15 + 1)}
+    barême = pd.read_csv('data/Barême PEL.csv', sep=";",
+                         header=1, index_col=0, converters=converters)
+    (prêt_pour_1_euro_dintérêts_acquis,
+     mensualité_pour_1000_euros_prêtés) = barême[str(durée_du_prêt_PEL)]
+    mt_du_prêt_du_PEL = mt_intérêts_acquis_PEL * prêt_pour_1_euro_dintérêts_acquis
+    mensualité = (mt_du_prêt_du_PEL * mensualité_pour_1000_euros_prêtés) / 1000
+    return mt_du_prêt_du_PEL, mensualité
+
+
+# L'exemple donné sur mon contrat PEL
+assert get_mt_prêt_et_mensualité_du_PEL(100, 7) == (3090.2000000000003, 41.38646146200001)
