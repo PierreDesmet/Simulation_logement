@@ -6,11 +6,21 @@ import base64
 from pathlib import Path
 
 
-taux_BNP = {
+TAUX_BNP = {
     15: 0.0281,
     20: 0.0287,
     25: 0.0289
 }
+
+# On considère 'Bon taux'
+TAUX_NOMINAL_PUBLIC = {
+    15: 0.0377,
+    20: 0.0385,
+    25: 0.04
+}
+
+TAUX_PEL = 0.0345  # Taux d'emprunt du PEL, fixé au moment de l'ouverture du contrat en 02/2024
+
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_appart = {
     'CACHAN': -0.004,
@@ -124,8 +134,10 @@ def get_mt_prêt_et_mensualité_du_PEL(
      mensualité_pour_1000_euros_prêtés) = barême[str(durée_du_prêt_PEL)]
     mt_du_prêt_du_PEL = mt_intérêts_acquis_PEL * prêt_pour_1_euro_dintérêts_acquis
     mensualité = (mt_du_prêt_du_PEL * mensualité_pour_1000_euros_prêtés) / 1000
-    return mt_du_prêt_du_PEL, mensualité
+    # "Le montant maximum du prêt est de 92 000 €" :
+    mt_du_prêt_du_PEL = min(mt_du_prêt_du_PEL, 92_000)
+    return int(mt_du_prêt_du_PEL), int(mensualité)
 
 
 # L'exemple donné sur mon contrat PEL
-assert get_mt_prêt_et_mensualité_du_PEL(100, 7) == (3090.2000000000003, 41.38646146200001)
+assert get_mt_prêt_et_mensualité_du_PEL(100, 7) == (3090, 41)

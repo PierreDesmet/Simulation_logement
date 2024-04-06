@@ -38,7 +38,8 @@ from fonctions import (
     nb_mois_depuis_que_lisa_économise,
     montant_qui_sera_remboursé_à_date,
     img_to_bytes,
-    taux_BNP
+    get_mt_prêt_et_mensualité_du_PEL,
+    TAUX_BNP, TAUX_NOMINAL_PUBLIC, TAUX_PEL
 )
 
 # Hypothèses
@@ -64,7 +65,7 @@ PARTICIPATION = 3122.84  # montant pour 2023
 INTERESSEMENT = 3000  # montant pour 2023
 PARTICIPATION_INTERESSEMENT = PARTICIPATION + INTERESSEMENT
 W_VARIABLE = (2000 + 1000) * (12 / 4)  # prorata de présence 2022, montant annuel
-TAUX_NOMINAL_PUBLIC = 4.1
+
 
 st.set_page_config(
     page_title='Estimation logement',
@@ -115,29 +116,42 @@ select_remb_anticipé_gratuit = st.sidebar.checkbox(
 )
 
 select_nb_années_pr_rembourser = st.sidebar.slider(
-    "Nombre d'années pour rembourser",
-    min_value=15, max_value=30, value=25, step=5
+    "Nombre d'années pour rembourser le crédit",
+    min_value=15, max_value=25, value=25, step=5
 )
 
 if select_avec_crédit_BNP:
     légende = 'Taux nominal BNP en %'
-    default = taux_BNP[select_nb_années_pr_rembourser] * 100
+    default = TAUX_BNP[select_nb_années_pr_rembourser] * 100
 else:
     légende = (
         "[Taux nominal public en %]"
         "(https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html)"
     )
-    default = TAUX_NOMINAL_PUBLIC
+    default = TAUX_NOMINAL_PUBLIC[select_nb_années_pr_rembourser] * 100
 select_tx_nominal = st.sidebar.slider(
     légende, 1., 5., default, step=0.05  # "Bon taux"
     # source : https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html
 )
+tx_nominal = select_tx_nominal / 100
+est_PEL_intéressant = TAUX_PEL < tx_nominal
+
+if est_PEL_intéressant:
+    select_nb_années_pr_rembourser_prêt_PEL = st.sidebar.slider(
+        "Nombre d'années pour rembourser le prêt du PEL",
+        min_value=2, max_value=15, value=3, step=1
+    )
+    select_mt_intérêts_acquis_pel = st.sidebar.number_input(
+        'Montant des intérêt acquis PEL', value=675,
+        step=100
+    )
+
 select_tx_frais_agence = st.sidebar.slider(
     "[Frais d'agence en %]"
     "(https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf)",
     3.0, 6.0, 4.5, step=0.5
 )
-
+select_tx_frais_agence /= 100
 
 st.sidebar.markdown(
     md_from_title_and_img("Apports", 'tirelire.png'),
@@ -234,8 +248,7 @@ capacité_max_emprunt_pde = mensualité_max_pde * select_nb_années_pr_rembourse
 mensualité_max_lvo = TAUX_MAX_ENDETTEMENT * select_w_mensuel_lvo_date_achat
 capacité_max_emprunt_lvo = mensualité_max_lvo * select_nb_années_pr_rembourser
 
-tx_nominal = select_tx_nominal / 100
-select_tx_frais_agence /= 100
+
 
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 st.markdown(
@@ -327,6 +340,16 @@ st.markdown(f'* Les frais de dossier bancaire : {sep_milliers(budget)} €')
 st.markdown(f'**➜ Soit un prix final maximum de : {sep_milliers(budget)} €**')
 st.markdown('-' * 3)
 
+phrase = "Utiliser le prêt du PEL n'est pas intéressant."
+if est_PEL_intéressant:
+    phrase = "Utiliser le prêt du PEL est intéressant : \n"
+    mt_du_prêt_du_PEL, mensualité_PEL = get_mt_prêt_et_mensualité_du_PEL(
+        mt_intérêts_acquis_PEL=select_mt_intérêts_acquis_pel,
+        durée_du_prêt_PEL=select_nb_années_pr_rembourser_prêt_PEL
+    )
+    phrase += f'Mt du prêt du PEL = {mt_du_prêt_du_PEL}, {mensualité_PEL=}'
+st.markdown(phrase)
+
 
 st.markdown(
     'Pour être exhaustive, cette simulation devrait aussi tenir compte '
@@ -359,3 +382,4 @@ st.markdown(
 # refactoring
 # intégrer le PEL (?)
 # vf que pour un euro d'emprunt supplémentaire, ça passe plus (mensualité > mensualité max)
+# compte à terme : https://placement.meilleurtaux.com/assurance-vie/actualites/2024-avril/voici-le-meilleur-compte-a-terme-en-2024.html
