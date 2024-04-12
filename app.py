@@ -38,8 +38,9 @@ from fonctions import (
     nb_mois_depuis_que_lisa_économise,
     montant_qui_sera_remboursé_à_date,
     img_to_bytes,
-    get_mt_prêt_et_mensualité_du_PEL,
-    TAUX_BNP, TAUX_NOMINAL_PUBLIC, TAUX_PEL
+    get_mt_max_prêt_PEL,
+    TAUX_BNP, TAUX_NOMINAL_PUBLIC, TAUX_PEL,
+    barême
 )
 
 # Hypothèses
@@ -61,7 +62,7 @@ TAUX_MAX_ENDETTEMENT = 0.35  # assurance comprise
 # des crédits immobiliers"
 DURÉE_MAX_CRÉDIT_EN_MOIS = 25 * 12
 
-PARTICIPATION = 3122.84  # montant pour 2023
+PARTICIPATION = 3346  # montant pour 2023
 INTERESSEMENT = 3000  # montant pour 2023
 PARTICIPATION_INTERESSEMENT = PARTICIPATION + INTERESSEMENT
 W_VARIABLE = (2000 + 1000) * (12 / 4)  # prorata de présence 2022, montant annuel
@@ -137,14 +138,18 @@ tx_nominal = select_tx_nominal / 100
 est_PEL_intéressant = TAUX_PEL < tx_nominal
 
 if est_PEL_intéressant:
-    select_nb_années_pr_rembourser_prêt_PEL = st.sidebar.slider(
-        "Nombre d'années pour rembourser le prêt du PEL",
-        min_value=2, max_value=15, value=3, step=1
-    )
+    curseur_PEL = st.sidebar.slider('curseur_PEL', 0., 1., 0., step=0.01)
+    # % de mon endettement alloué au PEL par opposition au prêt principal :
+    #curseur_PEL = 0.01
     select_mt_intérêts_acquis_pel = st.sidebar.number_input(
-        'Montant des intérêt acquis PEL', value=675,
+        'Montant des intérêt acquis PEL',
+        value=int(0.0225 * 18000 + 0.0225 * 35000 + 0.0225 * 52000 + 0.0225 * 60000),
         step=100
     )
+else:
+    curseur_PEL = 0  # par défaut, on n'utilise pas le PEL
+    mensualité_PEL = 0
+    mt_prêt_PEL = 0
 
 select_tx_frais_agence = st.sidebar.slider(
     "[Frais d'agence en %]"
@@ -229,44 +234,106 @@ apport_qui_sera_apporté_lvo += select_gain_mensuel_lvo * nb_mois_restants_avant
 
 montant_total_qui_sera_apporté = apport_qui_sera_apporté_pde + apport_qui_sera_apporté_lvo
 
-# Si je garde mon appartement, c'est pour le mettre en location (et donc, j'aurai
-# des revenus fonciers). On lit ici que les revenus fonciers sont pris en compte dans le
-# calcul du taux d'endettement à hauteur de 70% :
-# https://fr.luko.eu/conseils/guide/taux-endettement-maximum/
-# 1200 € : le montant que je peux mettre en location, charges comprises (source SeLoger)
-# Hypothèse pessimiste : l'établissement bancaire retire les charges de copropriété de
-# mes revenus fonciers dans le calcul du taux d'endettement. C'est plutôt rare, cf ChatGPT.
-mensualité_max_pde = TAUX_MAX_ENDETTEMENT * (
-    select_w_mensuel_pde_date_achat +
-    select_prise_en_compte_du_variable * (W_VARIABLE / 12) +
-    select_prise_en_compte_participation_interessement * (PARTICIPATION_INTERESSEMENT / 12) +
-    (not select_avec_vente_appartement) * (0.7 * (1200 - 250)) -
-    (not select_avec_vente_appartement) * (MONTANT_REMBOURSÉ_PAR_MOIS + ASSURANCE_PRÊT) -
-    (not select_avec_vente_appartement) * 0.0295 * 1200  # assurance loyer impayé, source Macif
-)
-capacité_max_emprunt_pde = mensualité_max_pde * select_nb_années_pr_rembourser
-mensualité_max_lvo = TAUX_MAX_ENDETTEMENT * select_w_mensuel_lvo_date_achat
-capacité_max_emprunt_lvo = mensualité_max_lvo * select_nb_années_pr_rembourser
+
+def calcule_mensualité_max_pde(
+    w_mensuel_pde_date_achat=select_w_mensuel_pde_date_achat,
+    prise_en_compte_du_variable=select_prise_en_compte_du_variable,
+    w_variable=W_VARIABLE,
+    taux_max_endettement=TAUX_MAX_ENDETTEMENT,
+    prise_en_compte_participation_interessement=select_prise_en_compte_participation_interessement,
+    participation_intéressement=PARTICIPATION_INTERESSEMENT,
+    avec_vente_appartement=select_avec_vente_appartement,
+    mt_remboursé_par_mois=MONTANT_REMBOURSÉ_PAR_MOIS,
+    assurance_prêt=ASSURANCE_PRÊT
+):
+    """
+    Si je garde mon appartement, c'est pour le mettre en location (et donc, j'aurai
+    des revenus fonciers). On lit ici que les revenus fonciers sont pris en compte dans le
+    calcul du taux d'endettement à hauteur de 70% :
+    https://fr.luko.eu/conseils/guide/taux-endettement-maximum/
+    1200 € : le montant que je peux mettre en location, charges comprises (source SeLoger)
+    Hypothèse pessimiste : l'établissement bancaire retire les charges de copropriété de
+    mes revenus fonciers dans le calcul du taux d'endettement. C'est plutôt rare, cf ChatGPT.
+    """
+    mensualité_max_pde = taux_max_endettement * (
+        w_mensuel_pde_date_achat +
+        prise_en_compte_du_variable * (w_variable / 12) +
+        prise_en_compte_participation_interessement * (participation_intéressement / 12) +
+        (not avec_vente_appartement) * (0.7 * (1200 - 250)) -
+        (not avec_vente_appartement) * (mt_remboursé_par_mois + assurance_prêt) -
+        (not avec_vente_appartement) * 0.0295 * 1200  # assurance loyer impayé, source Macif
+    )
+    return mensualité_max_pde
 
 
+def calcule_mensualité_max_lvo(
+        w_mensuel_lvo_date_achat=select_w_mensuel_lvo_date_achat,
+        tx_max_endettement=TAUX_MAX_ENDETTEMENT
+):
+    mensualité_max_lvo = tx_max_endettement * w_mensuel_lvo_date_achat
+    return mensualité_max_lvo
 
+
+mensualité_max_lvo = calcule_mensualité_max_lvo()
+mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
+
 st.markdown(
     'Mensualité maximale supportable par Lisa et Pierre : '
     f'{sep_milliers(mensualité_maximale)} €, '
     f'dont {sep_milliers(mensualité_max_pde)} € Pierre et '
     f'{sep_milliers(mensualité_max_lvo)} € Lisa.'
 )
-mt_emprunt_max = get_mt_emprunt_max(
-    mensualité_max=mensualité_maximale,
+del mensualité_maximale
+
+
+taux_max_endettement_PEL = curseur_PEL * TAUX_MAX_ENDETTEMENT
+taux_max_endettement_prêt_principal = (1 - curseur_PEL) * TAUX_MAX_ENDETTEMENT
+
+
+mensualité_plafond_pde_PEL = calcule_mensualité_max_pde(
+    taux_max_endettement=taux_max_endettement_PEL
+)
+mensualité_max_pde_prêt_principal = calcule_mensualité_max_pde(
+    taux_max_endettement=taux_max_endettement_prêt_principal
+)
+if est_PEL_intéressant:
+    (
+        durée_du_prêt_PEL, mt_prêt_PEL,
+        mensualité_PEL, intérêts_acquis_utilisés_PEL
+    ) = get_mt_max_prêt_PEL(
+        barême,
+        mt_intérêts_acquis_PEL=select_mt_intérêts_acquis_pel,
+        mensualité_plafond=mensualité_plafond_pde_PEL
+    )
+
+    st.markdown(f"--- PEL, {mensualité_plafond_pde_PEL=:.0f}, {mensualité_PEL=}, {taux_max_endettement_PEL=:.2%}   {intérêts_acquis_utilisés_PEL=}")
+    st.markdown(f"---Prêt principal, {mensualité_max_pde_prêt_principal=},  {taux_max_endettement_prêt_principal=:.2%}")
+
+mt_prêt_principal_pde = get_mt_emprunt_max(
+    mensualité_max=mensualité_max_pde_prêt_principal,
     tx_nominal=tx_nominal,
     nb_mois=select_nb_années_pr_rembourser * 12
 )
+mt_prêt_principal_lvo = get_mt_emprunt_max(
+    mensualité_max=mensualité_max_lvo,
+    tx_nominal=tx_nominal,
+    nb_mois=select_nb_années_pr_rembourser * 12
+)
+mt_prêt_principal = mt_prêt_principal_pde + mt_prêt_principal_lvo
+mt_emprunt_max = mt_prêt_principal + mt_prêt_PEL
+
 st.markdown(
     f'Cette mensualité, adossée à un taux nominal de {tx_nominal:.2%}, '
     f"permet d'emprunter au maximum {sep_milliers(mt_emprunt_max)} € "
     f'sur {select_nb_années_pr_rembourser} ans.'
 )
+if est_PEL_intéressant:
+    st.markdown(
+        f'dont {sep_milliers(mt_prêt_PEL)} € '
+        f'avec le PEL (sur {durée_du_prêt_PEL} ans '
+        f'et des mensualités de {mensualité_PEL} €).'
+    )
 budget = montant_total_qui_sera_apporté + mt_emprunt_max
 phrase = f'Notre apport est de {sep_milliers(montant_total_qui_sera_apporté)} €'
 if select_avec_vente_appartement:
@@ -295,8 +362,13 @@ st.markdown(
     f'{sep_milliers(budget)} €'
 )
 
-
-coût_crédit = mensualité_maximale * 12 * select_nb_années_pr_rembourser - mt_emprunt_max
+mensualités_prêt_principal = (mensualité_max_pde_prêt_principal + mensualité_max_lvo)
+coût_crédit_principal = (
+    mensualités_prêt_principal * 12 * select_nb_années_pr_rembourser - mt_prêt_principal
+)
+coût_crédit_PEL = mensualité_PEL * 12 * select_nb_années_pr_rembourser - mt_prêt_PEL
+st.markdown(f"---  {coût_crédit_principal=}    {mt_prêt_principal=}   {mensualités_prêt_principal=}")
+coût_crédit = coût_crédit_principal + coût_crédit_PEL
 budget -= coût_crédit
 if select_avec_crédit_BNP:
     prefix = (
@@ -309,7 +381,7 @@ st.markdown(prefix + f"(hors assurance) : {sep_milliers(budget)} €")
 
 # mensualité d'assurance / mensualité du crédit
 tx_assurance_actuelle = 16.07 / MONTANT_REMBOURSÉ_PAR_MOIS
-coût_assurance = tx_assurance_actuelle * mensualité_maximale * 12 * select_nb_années_pr_rembourser
+coût_assurance = tx_assurance_actuelle * mt_emprunt_max
 budget -= coût_assurance
 st.markdown(f"* Le coût de l'assurance emprunteur : {sep_milliers(budget)} €")
 
@@ -339,16 +411,6 @@ st.markdown(f'* Les frais de dossier bancaire : {sep_milliers(budget)} €')
 
 st.markdown(f'**➜ Soit un prix final maximum de : {sep_milliers(budget)} €**')
 st.markdown('-' * 3)
-
-phrase = "Utiliser le prêt du PEL n'est pas intéressant."
-if est_PEL_intéressant:
-    phrase = "Utiliser le prêt du PEL est intéressant : \n"
-    mt_du_prêt_du_PEL, mensualité_PEL = get_mt_prêt_et_mensualité_du_PEL(
-        mt_intérêts_acquis_PEL=select_mt_intérêts_acquis_pel,
-        durée_du_prêt_PEL=select_nb_années_pr_rembourser_prêt_PEL
-    )
-    phrase += f'Mt du prêt du PEL = {mt_du_prêt_du_PEL}, {mensualité_PEL=}'
-st.markdown(phrase)
 
 
 st.markdown(

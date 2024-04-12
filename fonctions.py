@@ -7,9 +7,9 @@ from pathlib import Path
 
 
 TAUX_BNP = {
-    15: 0.0281,
-    20: 0.0287,
-    25: 0.0289
+    15: 0.0278,
+    20: 0.0283,
+    25: 0.0284
 }
 
 # On considère 'Bon taux'
@@ -124,20 +124,111 @@ def img_to_bytes(img_path):
     return encoded
 
 
+converters = {str(i): (lambda x: float(x.replace(',', '.'))) for i in range(2, 15 + 1)}
+barême = pd.read_csv('data/Barême PEL.csv', sep=";",
+                     header=1, index_col=0, converters=converters)
+
+
 def get_mt_prêt_et_mensualité_du_PEL(
-    mt_intérêts_acquis_PEL=1000, durée_du_prêt_PEL=5
+    barême,
+    mt_intérêts_acquis_PEL, durée_du_prêt_PEL=5
 ) -> tuple([float, float]):
-    converters = {str(i): (lambda x: float(x.replace(',', '.'))) for i in range(2, 15 + 1)}
-    barême = pd.read_csv('data/Barême PEL.csv', sep=";",
-                         header=1, index_col=0, converters=converters)
-    (prêt_pour_1_euro_dintérêts_acquis,
-     mensualité_pour_1000_euros_prêtés) = barême[str(durée_du_prêt_PEL)]
+    (
+        prêt_pour_1_euro_dintérêts_acquis,
+        mensualité_pour_1000_euros_prêtés
+    ) = barême[str(durée_du_prêt_PEL)]
     mt_du_prêt_du_PEL = mt_intérêts_acquis_PEL * prêt_pour_1_euro_dintérêts_acquis
     mensualité = (mt_du_prêt_du_PEL * mensualité_pour_1000_euros_prêtés) / 1000
     # "Le montant maximum du prêt est de 92 000 €" :
     mt_du_prêt_du_PEL = min(mt_du_prêt_du_PEL, 92_000)
-    return int(mt_du_prêt_du_PEL), int(mensualité)
+    return round(mt_du_prêt_du_PEL), round(mensualité)
 
 
 # L'exemple donné sur mon contrat PEL
-assert get_mt_prêt_et_mensualité_du_PEL(100, 7) == (3090, 41)
+assert get_mt_prêt_et_mensualité_du_PEL(barême, 100, 7) == (3090, 41)
+
+
+def get_mt_max_prêt_PEL(barême, mt_intérêts_acquis_PEL: int,
+                        mensualité_plafond: int, durée_du_prêt_PEL: int = 2):
+    """
+    Trouve le plus grand montant empruntable tel que la mensualité qu'il permet soit
+    inférieure au plafond
+    """
+    if mt_intérêts_acquis_PEL <= 0 and durée_du_prêt_PEL >= 15:
+        # Game over, on ne peut pas utiliser le PEL
+        return 0, 0, 0, 0
+    mt_du_prêt_du_PEL, mensualité = get_mt_prêt_et_mensualité_du_PEL(
+        barême=barême,
+        mt_intérêts_acquis_PEL=mt_intérêts_acquis_PEL,
+        durée_du_prêt_PEL=durée_du_prêt_PEL
+    )
+    print(f'{mt_du_prêt_du_PEL=}', f'{mensualité=}', f'{durée_du_prêt_PEL=}', f'{mt_intérêts_acquis_PEL=}')
+    # Si on optimise en premier la durée du prêt :
+    if mensualité > mensualité_plafond:
+        if durée_du_prêt_PEL < 15:
+            return get_mt_max_prêt_PEL(
+                barême,
+                mt_intérêts_acquis_PEL=mt_intérêts_acquis_PEL,
+                mensualité_plafond=mensualité_plafond,
+                durée_du_prêt_PEL=durée_du_prêt_PEL + 1
+            )
+        else:
+            lr = 100
+            return get_mt_max_prêt_PEL(
+                barême,
+                mt_intérêts_acquis_PEL=mt_intérêts_acquis_PEL - lr,
+                mensualité_plafond=mensualité_plafond,
+                durée_du_prêt_PEL=durée_du_prêt_PEL
+            )
+        # Si on optimise en premier les intérêt acquis :
+        # if mt_intérêts_acquis_PEL > 0:
+        #     lr = 100
+        #     return get_mt_max_prêt_PEL(
+        #         barême,
+        #         mt_intérêts_acquis_PEL=mt_intérêts_acquis_PEL - lr,
+        #         mensualité_plafond=mensualité_plafond,
+        #         durée_du_prêt_PEL=durée_du_prêt_PEL
+        #     )
+        # else:
+        #     return get_mt_max_prêt_PEL(
+        #         barême,
+        #         mt_intérêts_acquis_PEL=mt_intérêts_acquis_PEL,
+        #         mensualité_plafond=mensualité_plafond,
+        #         durée_du_prêt_PEL=durée_du_prêt_PEL - 1
+        #     )
+    return (
+        durée_du_prêt_PEL, mt_du_prêt_du_PEL,
+        mensualité, mt_intérêts_acquis_PEL
+    )
+
+
+(
+    durée_du_prêt_PEL, mt_du_prêt_du_PEL,
+    mensualité, intérêts_acquis_utilisés_PEL
+) = get_mt_max_prêt_PEL(
+    barême, mt_intérêts_acquis_PEL=3712, mensualité_plafond=421
+)
+assert durée_du_prêt_PEL == 14
+assert mt_du_prêt_du_PEL == 56_274
+assert mensualité == 421
+
+(
+    durée_du_prêt_PEL, mt_du_prêt_du_PEL,
+    mensualité, intérêts_acquis_utilisés_PEL
+) = get_mt_max_prêt_PEL(
+    barême, mt_intérêts_acquis_PEL=3712, mensualité_plafond=420
+)
+assert durée_du_prêt_PEL == 15
+assert mt_du_prêt_du_PEL == 52_358
+assert mensualité == 372
+
+(
+    durée_du_prêt_PEL, mt_du_prêt_du_PEL,
+    mensualité, intérêts_acquis_utilisés_PEL
+) = get_mt_max_prêt_PEL(
+    barême, mt_intérêts_acquis_PEL=3712, mensualité_plafond=1
+)
+assert durée_du_prêt_PEL == 15
+print(mt_du_prêt_du_PEL)
+assert mt_du_prêt_du_PEL == 169
+assert mensualité == 1
