@@ -23,22 +23,22 @@ TAUX_PEL = 0.0345  # Taux d'emprunt du PEL, fixé au moment de l'ouverture du co
 
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_appart = {
-    'CACHAN': -0.004,
-    'CHATOU': 0.021,
+    'CACHAN': 0.036,
+    'CHATOU': 0.006,
     'MAISONS-LAFFITTE': -0.017,
-    'RUEIL-MALMAISON': 0.032,
-    'VÉSINET': -0.017,
-    'SAINT-GERMAIN EN LAYE': 0.232
+    'RUEIL-MALMAISON': 0.043,
+    'VÉSINET': 0.028,
+    'SAINT-GERMAIN EN LAYE': 0.252
 }
 
 # en 5 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_maison = {
-    'CACHAN': 0.073,
-    'CHATOU': 0.129,
+    'CACHAN': 0.079,
+    'CHATOU': 0.105,
     'MAISONS-LAFFITTE': 0.191,
-    'RUEIL-MALMAISON': 0.051,
-    'VÉSINET': 0.149,
-    'SAINT-GERMAIN EN LAYE': 0.129
+    'RUEIL-MALMAISON': 0.004,
+    'VÉSINET': 0.182,
+    'SAINT-GERMAIN EN LAYE': 0.161
 }
 
 lieu_to_url_meilleurs_agents = {
@@ -148,8 +148,8 @@ def get_mt_prêt_et_mensualité_du_PEL(
 assert get_mt_prêt_et_mensualité_du_PEL(barême, 100, 7) == (3090, 41)
 
 
-def get_mt_max_prêt_PEL(barême, mt_intérêts_acquis_PEL: int,
-                        mensualité_plafond: int, durée_du_prêt_PEL: int = 2):
+def get_mt_max_prêt_PEL(barême, mt_intérêts_acquis_PEL: int, mensualité_plafond: int,
+                        durée_du_prêt_PEL: int = 2, verbose=False):
     """
     Trouve le plus grand montant empruntable tel que la mensualité qu'il permet soit
     inférieure au plafond
@@ -162,7 +162,10 @@ def get_mt_max_prêt_PEL(barême, mt_intérêts_acquis_PEL: int,
         mt_intérêts_acquis_PEL=mt_intérêts_acquis_PEL,
         durée_du_prêt_PEL=durée_du_prêt_PEL
     )
-    print(f'{mt_du_prêt_du_PEL=}', f'{mensualité=}', f'{durée_du_prêt_PEL=}', f'{mt_intérêts_acquis_PEL=}')
+    if verbose:
+        debug_msg = f'{durée_du_prêt_PEL=}  {mt_intérêts_acquis_PEL=}  ->  {mt_du_prêt_du_PEL=}  '
+        debug_msg += f'{mensualité=}  '
+        print(debug_msg)
     # Si on optimise en premier la durée du prêt :
     if mensualité > mensualité_plafond:
         if durée_du_prêt_PEL < 15:
@@ -170,7 +173,8 @@ def get_mt_max_prêt_PEL(barême, mt_intérêts_acquis_PEL: int,
                 barême,
                 mt_intérêts_acquis_PEL=mt_intérêts_acquis_PEL,
                 mensualité_plafond=mensualité_plafond,
-                durée_du_prêt_PEL=durée_du_prêt_PEL + 1
+                durée_du_prêt_PEL=durée_du_prêt_PEL + 1,
+                verbose=verbose
             )
         else:
             lr = 100
@@ -178,7 +182,8 @@ def get_mt_max_prêt_PEL(barême, mt_intérêts_acquis_PEL: int,
                 barême,
                 mt_intérêts_acquis_PEL=mt_intérêts_acquis_PEL - lr,
                 mensualité_plafond=mensualité_plafond,
-                durée_du_prêt_PEL=durée_du_prêt_PEL
+                durée_du_prêt_PEL=durée_du_prêt_PEL,
+                verbose=verbose
             )
         # Si on optimise en premier les intérêt acquis :
         # if mt_intérêts_acquis_PEL > 0:
@@ -226,9 +231,8 @@ assert mensualité == 372
     durée_du_prêt_PEL, mt_du_prêt_du_PEL,
     mensualité, intérêts_acquis_utilisés_PEL
 ) = get_mt_max_prêt_PEL(
-    barême, mt_intérêts_acquis_PEL=3712, mensualité_plafond=1
+    barême, mt_intérêts_acquis_PEL=3712, mensualité_plafond=1, verbose=False
 )
 assert durée_du_prêt_PEL == 15
-print(mt_du_prêt_du_PEL)
 assert mt_du_prêt_du_PEL == 169
 assert mensualité == 1

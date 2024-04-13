@@ -150,6 +150,7 @@ else:
     curseur_PEL = 0  # par défaut, on n'utilise pas le PEL
     mensualité_PEL = 0
     mt_prêt_PEL = 0
+    durée_du_prêt_PEL = 0
 
 select_tx_frais_agence = st.sidebar.slider(
     "[Frais d'agence en %]"
@@ -284,19 +285,10 @@ st.markdown(
     f'dont {sep_milliers(mensualité_max_pde)} € Pierre et '
     f'{sep_milliers(mensualité_max_lvo)} € Lisa.'
 )
-del mensualité_maximale
 
+mensualité_plafond_pde_PEL = curseur_PEL * mensualité_max_pde
+mensualité_max_pde_prêt_principal = (1 - curseur_PEL) * mensualité_max_pde
 
-taux_max_endettement_PEL = curseur_PEL * TAUX_MAX_ENDETTEMENT
-taux_max_endettement_prêt_principal = (1 - curseur_PEL) * TAUX_MAX_ENDETTEMENT
-
-
-mensualité_plafond_pde_PEL = calcule_mensualité_max_pde(
-    taux_max_endettement=taux_max_endettement_PEL
-)
-mensualité_max_pde_prêt_principal = calcule_mensualité_max_pde(
-    taux_max_endettement=taux_max_endettement_prêt_principal
-)
 if est_PEL_intéressant:
     (
         durée_du_prêt_PEL, mt_prêt_PEL,
@@ -306,9 +298,6 @@ if est_PEL_intéressant:
         mt_intérêts_acquis_PEL=select_mt_intérêts_acquis_pel,
         mensualité_plafond=mensualité_plafond_pde_PEL
     )
-
-    st.markdown(f"--- PEL, {mensualité_plafond_pde_PEL=:.0f}, {mensualité_PEL=}, {taux_max_endettement_PEL=:.2%}   {intérêts_acquis_utilisés_PEL=}")
-    st.markdown(f"---Prêt principal, {mensualité_max_pde_prêt_principal=},  {taux_max_endettement_prêt_principal=:.2%}")
 
 mt_prêt_principal_pde = get_mt_emprunt_max(
     mensualité_max=mensualité_max_pde_prêt_principal,
@@ -322,17 +311,24 @@ mt_prêt_principal_lvo = get_mt_emprunt_max(
 )
 mt_prêt_principal = mt_prêt_principal_pde + mt_prêt_principal_lvo
 mt_emprunt_max = mt_prêt_principal + mt_prêt_PEL
+mensualités_prêt_principal = mensualité_max_pde_prêt_principal + mensualité_max_lvo
 
-st.markdown(
+phrase = (
     f'Cette mensualité, adossée à un taux nominal de {tx_nominal:.2%}, '
     f"permet d'emprunter au maximum {sep_milliers(mt_emprunt_max)} € "
-    f'sur {select_nb_années_pr_rembourser} ans.'
+    f'sur {select_nb_années_pr_rembourser} ans :'
 )
+
 if est_PEL_intéressant:
     st.markdown(
-        f'dont {sep_milliers(mt_prêt_PEL)} € '
-        f'avec le PEL (sur {durée_du_prêt_PEL} ans '
-        f'et des mensualités de {mensualité_PEL} €).'
+        phrase +
+        f'\n* {sep_milliers(mt_prêt_PEL)} € '
+        f'avec le PEL (sur {durée_du_prêt_PEL} ans, '
+        f'avec des mensualités de {mensualité_PEL} € et sur la base de '
+        f"{sep_milliers(intérêts_acquis_utilisés_PEL)} € d'intérêts acquis utilisés)"
+        f'\n* {sep_milliers(mt_prêt_principal)} € '
+        f'avec le prêt principal (sur {select_nb_années_pr_rembourser} ans '
+        f'avec des mensualités de {sep_milliers(mensualités_prêt_principal)} €)'
     )
 budget = montant_total_qui_sera_apporté + mt_emprunt_max
 phrase = f'Notre apport est de {sep_milliers(montant_total_qui_sera_apporté)} €'
@@ -359,15 +355,13 @@ url_meilleurs_agents = lieu_to_url_meilleurs_agents[select_ville]
 st.markdown(
     f"* [L'inflation](https://www.meilleursagents.com/prix-immobilier/{url_meilleurs_agents}/)"
     f" ({lieu_to_inflation[select_ville]:.2%} en 5 ans à {select_ville}) : "
-    f'{sep_milliers(budget)} €'
+    f'reste {sep_milliers(budget)} €'
 )
 
-mensualités_prêt_principal = (mensualité_max_pde_prêt_principal + mensualité_max_lvo)
 coût_crédit_principal = (
     mensualités_prêt_principal * 12 * select_nb_années_pr_rembourser - mt_prêt_principal
 )
-coût_crédit_PEL = mensualité_PEL * 12 * select_nb_années_pr_rembourser - mt_prêt_PEL
-st.markdown(f"---  {coût_crédit_principal=}    {mt_prêt_principal=}   {mensualités_prêt_principal=}")
+coût_crédit_PEL = mensualité_PEL * 12 * durée_du_prêt_PEL - mt_prêt_PEL
 coût_crédit = coût_crédit_principal + coût_crédit_PEL
 budget -= coût_crédit
 if select_avec_crédit_BNP:
@@ -377,18 +371,24 @@ if select_avec_crédit_BNP:
     )
 else:
     prefix = '* Le coût du crédit '
-st.markdown(prefix + f"(hors assurance) : {sep_milliers(budget)} €")
+st.markdown(
+    prefix + f"(hors assurance) : reste {sep_milliers(budget)} €, dont :\n"
+    f"\t - {sep_milliers(coût_crédit_principal)} € "
+    "d'intérêts à rembourser au titre du crédit principal\n"
+    f"\t - {sep_milliers(coût_crédit_PEL)} € "
+    "d'intérêts à rembourser au titre du crédit PEL"
+)
 
 # mensualité d'assurance / mensualité du crédit
 tx_assurance_actuelle = 16.07 / MONTANT_REMBOURSÉ_PAR_MOIS
 coût_assurance = tx_assurance_actuelle * mt_emprunt_max
 budget -= coût_assurance
-st.markdown(f"* Le coût de l'assurance emprunteur : {sep_milliers(budget)} €")
+st.markdown(f"* Le coût de l'assurance emprunteur : reste {sep_milliers(budget)} €")
 
 frais_de_notaire = 0.075 if select_neuf_ancien == 'Ancien' else 0.03
 frais_de_notaire *= budget
 budget -= frais_de_notaire
-st.markdown(f"* Les frais de notaire : {sep_milliers(budget)} €")
+st.markdown(f"* Les frais de notaire : reste {sep_milliers(budget)} €")
 
 if select_avec_vente_appartement:
     budget -= (select_tx_frais_agence * prix_estimé_revente)
@@ -396,18 +396,18 @@ if select_avec_vente_appartement:
         "* Les [frais d'agence]"
         "(https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf) "
         "sur la revente de l'appartement de Cachan : "
-        f'{sep_milliers(budget)} €'
+        f'reste {sep_milliers(budget)} €'
     )
 
 if not select_remb_anticipé_gratuit:
     budget -= indemnités_de_remb_par_anticipation
     st.markdown(
         "* Les indemnités de remboursement par anticipation : "
-        f'{sep_milliers(budget)} €'
+        f'reste {sep_milliers(budget)} €'
     )
 
 budget -= 1000
-st.markdown(f'* Les frais de dossier bancaire : {sep_milliers(budget)} €')
+st.markdown(f'* Les frais de dossier bancaire : reste {sep_milliers(budget)} €')
 
 st.markdown(f'**➜ Soit un prix final maximum de : {sep_milliers(budget)} €**')
 st.markdown('-' * 3)
@@ -430,7 +430,6 @@ st.markdown(
     * des éventuels frais de courtage,
     * des éventuels frais de tenue de compte en cas d'ouverture de compte dans une banque,
     * des éventuels frais de garanties (hypothèque ou cautionnement)
-    * du taux d'emprunt PEL potentiellement plus avantageux que le taux d'emprunt BNP
 
     Hypothèses prises :
     * Pour prédire l'inflation, on a estimé l'inflation moyenne dans la ville
@@ -442,6 +441,5 @@ st.markdown(
 
 # TODO :
 # refactoring
-# intégrer le PEL (?)
 # vf que pour un euro d'emprunt supplémentaire, ça passe plus (mensualité > mensualité max)
 # compte à terme : https://placement.meilleurtaux.com/assurance-vie/actualites/2024-avril/voici-le-meilleur-compte-a-terme-en-2024.html
