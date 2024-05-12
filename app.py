@@ -49,10 +49,10 @@ SECURITE_LISA = 10_000
 # Appartement actuel à Cachan
 TX_LBP = 0.9
 DATE_DÉBUT_DU_PRÊT_EXISTANT = datetime.date(2020, 10, 1)
-MONTANT_REMBOURSÉ_PAR_MOIS = 878
-CHARGES_MENSUELLES = 215
+MONTANT_REMBOURSÉ_PAR_MOIS = 878.19
+CHARGES_MENSUELLES = 200
 PRIX_APPARTEMENT_CACHAN = 259_000
-MONTANT_EMPRUNTE = 192_000
+MONTANT_EMPRUNTE = 192_820
 ASSURANCE_PRÊT = 16
 
 # "Le taux maximum d'endettement ne peux excéder 35 % des revenus des emprunteurs,
@@ -135,7 +135,7 @@ select_tx_nominal = st.sidebar.slider(
     # source : https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html
 )
 tx_nominal = select_tx_nominal / 100
-est_PEL_intéressant = TAUX_PEL < tx_nominal
+est_PEL_intéressant = TAUX_PEL <= tx_nominal
 
 if est_PEL_intéressant:
     curseur_PEL = st.sidebar.slider('curseur_PEL', 0., 1., 0., step=0.01)
@@ -143,7 +143,7 @@ if est_PEL_intéressant:
     #curseur_PEL = 0.01
     select_mt_intérêts_acquis_pel = st.sidebar.number_input(
         'Montant des intérêt acquis PEL',
-        value=int(0.0225 * 18000 + 0.0225 * 35000 + 0.0225 * 52000 + 0.0225 * 60000),
+        value=int(0.0225 * 20000 + 0.0225 * 35000 + 0.0225 * 52000 + 0.0225 * 60000),
         step=100
     )
 else:
@@ -188,7 +188,7 @@ select_w_mensuel_pde_date_achat = st.sidebar.slider(
     min_value=3000, max_value=5000, value=4200, step=100
 )
 # En sept. 2023, 3624 * 13 / 12 = 3930 de mensuel net avant impôt
-# En avril 2024, augmentation du fixe de 700€ (ou 800 ?)
+# En avril 2024, 3652 * 13 / 12 = 3956 de mensuel net avant impôt
 
 select_w_mensuel_lvo_date_achat = st.sidebar.slider(
     "Salaire mensuel net av. impôt Lisa à date d'achat",
@@ -324,8 +324,8 @@ if est_PEL_intéressant:
         phrase +
         f'\n* {sep_milliers(mt_prêt_PEL)} € '
         f'avec le PEL (sur {durée_du_prêt_PEL} ans, '
-        f'avec des mensualités de {mensualité_PEL} € et sur la base de '
-        f"{sep_milliers(intérêts_acquis_utilisés_PEL)} € d'intérêts acquis utilisés)"
+        f'avec des mensualités de {mensualité_PEL} € et en utilisant '
+        f"{sep_milliers(intérêts_acquis_utilisés_PEL)} € d'intérêts acquis)"
         f'\n* {sep_milliers(mt_prêt_principal)} € '
         f'avec le prêt principal (sur {select_nb_années_pr_rembourser} ans '
         f'avec des mensualités de {sep_milliers(mensualités_prêt_principal)} €)'
@@ -372,7 +372,8 @@ if select_avec_crédit_BNP:
 else:
     prefix = '* Le coût du crédit '
 st.markdown(
-    prefix + f"(hors assurance) : reste {sep_milliers(budget)} €, dont :\n"
+    prefix + f"(hors assurance) : {sep_milliers(coût_crédit)} €, "
+    f"reste {sep_milliers(budget)} €. Détail :\n"
     f"\t - {sep_milliers(coût_crédit_principal)} € "
     "d'intérêts à rembourser au titre du crédit principal\n"
     f"\t - {sep_milliers(coût_crédit_PEL)} € "
@@ -443,3 +444,4 @@ st.markdown(
 # refactoring
 # vf que pour un euro d'emprunt supplémentaire, ça passe plus (mensualité > mensualité max)
 # compte à terme : https://placement.meilleurtaux.com/assurance-vie/actualites/2024-avril/voici-le-meilleur-compte-a-terme-en-2024.html
+# Y a-t-il une assurance du PEL ?
