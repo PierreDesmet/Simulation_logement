@@ -26,6 +26,7 @@ Sources :
 """
 import datetime
 import numpy as np
+import pandas as pd
 import streamlit as st
 from PIL import Image
 
@@ -36,7 +37,7 @@ from fonctions import (
     get_mt_emprunt_max,
     sep_milliers,
     nb_mois_depuis_que_lisa_économise,
-    montant_qui_sera_remboursé_à_date,
+    get_CRD_à_date,
     img_to_bytes,
     get_mt_max_prêt_PEL,
     TAUX_BNP, TAUX_NOMINAL_PUBLIC, TAUX_PEL,
@@ -48,7 +49,7 @@ SECURITE_LISA = 10_000
 
 # Appartement actuel à Cachan
 TX_LBP = 0.9
-DATE_DÉBUT_DU_PRÊT_EXISTANT = datetime.date(2020, 10, 1)
+DATE_DÉBUT_DU_PRÊT_EXISTANT = datetime.date(2020, 5, 5)
 MONTANT_REMBOURSÉ_PAR_MOIS = 878.19
 CHARGES_MENSUELLES = 200
 PRIX_APPARTEMENT_CACHAN = 259_000
@@ -112,8 +113,12 @@ select_prise_en_compte_du_variable = st.sidebar.checkbox("Avec prise en compte d
 select_prise_en_compte_participation_interessement = st.sidebar.checkbox(
     "Avec prise en compte de la participation et de l'intéressement", False
 )
+# Une fois révolu le 7e anniversaire suivant la date de signature de la présente offre,
+# l'Emprunteur peut effectuer des remboursements par anticipation, sans frais
+remb_anticipé_gratuit = (DATE_DÉBUT_DU_PRÊT_EXISTANT + pd.DateOffset(years=7)).date()
+remb_anticipé_gratuit = select_date_achat > remb_anticipé_gratuit
 select_remb_anticipé_gratuit = st.sidebar.checkbox(
-    "Avec clause de remboursement anticipée gratuite", False
+    "Avec clause de remboursement anticipée gratuite", value=remb_anticipé_gratuit
 )
 
 select_nb_années_pr_rembourser = st.sidebar.slider(
@@ -138,9 +143,8 @@ tx_nominal = select_tx_nominal / 100
 est_PEL_intéressant = TAUX_PEL <= tx_nominal
 
 if est_PEL_intéressant:
-    curseur_PEL = st.sidebar.slider('curseur_PEL', 0., 1., 0., step=0.01)
     # % de mon endettement alloué au PEL par opposition au prêt principal :
-    #curseur_PEL = 0.01
+    curseur_PEL = st.sidebar.slider('curseur_PEL', 0., 1., 0., step=0.01)
     select_mt_intérêts_acquis_pel = st.sidebar.number_input(
         'Montant des intérêt acquis PEL',
         value=int(0.0225 * 20000 + 0.0225 * 35000 + 0.0225 * 52000 + 0.0225 * 60000),
@@ -202,11 +206,6 @@ nb_mois_restants_avant_achat = round(
     (select_date_achat - datetime.date.today()).days / 30.5
 )
 nb_années_restantes_avant_achat = nb_mois_restants_avant_achat / 12
-montant_qui_sera_remboursé = montant_qui_sera_remboursé_à_date(
-    date_début_du_prêt_existant=DATE_DÉBUT_DU_PRÊT_EXISTANT,
-    mt_remboursé_par_mois=MONTANT_REMBOURSÉ_PAR_MOIS,
-    date=select_date_achat
-)
 
 sign = np.sign(lieu_to_inflation_appart['CACHAN'])
 inflation_annuelle_cachan = abs(lieu_to_inflation_appart['CACHAN']) ** (1 / 5)
@@ -215,10 +214,18 @@ inflation_cachan_avant_achat = sign * (
 )
 prix_estimé_revente = PRIX_APPARTEMENT_CACHAN * (1 + inflation_cachan_avant_achat)
 
-CRD = MONTANT_EMPRUNTE - montant_qui_sera_remboursé
+CRD = get_CRD_à_date(
+    à_date=select_date_achat,
+    date_début_du_prêt_existant=DATE_DÉBUT_DU_PRÊT_EXISTANT,
+    montant_emprunté=MONTANT_EMPRUNTE
+)
+
 # Source : pdf des conditions générales LBP
 indemnités_de_remb_par_anticipation = min(
-    TX_LBP * CRD * 6,
+    # "En cas de remboursement anticipé, LBP percevra une indemnité égale à un semestre d'intérêts
+    # calculés au taux indiqué dans les conditions particulières sur le montant du CRD."
+    144.62 * 6,
+    # "Cette indemnité est plafonnée à 3 % du capital restant dû avant le remboursement."
     CRD * 0.03,
 )
 dû_à_la_banque = CRD + (
@@ -335,7 +342,8 @@ phrase = f'Notre apport est de {sep_milliers(montant_total_qui_sera_apporté)} �
 if select_avec_vente_appartement:
     phrase += (
         f", dont {sep_milliers(solde_revente)} € liés à la revente de l'appartement de Cachan "
-        f"(prix de revente estimé à {sep_milliers(prix_estimé_revente)} €)"
+        f"(prix de revente estimé à {sep_milliers(prix_estimé_revente)} €, "
+        f"amputé du CRD de {sep_milliers(CRD)} €)."
     )
 st.markdown(phrase + '.')
 
@@ -418,7 +426,7 @@ st.markdown(
     'Pour être exhaustive, cette simulation devrait aussi tenir compte '
     'des gros impacts sur nos finances :\n'
     '* un enfant, le ravalement, un mariage, des voyages, etc.\n'
-    '* un héritage, les JO 2024, etc.'
+    '* un héritage, une donation, les JO 2024, etc.'
 )
 st.markdown(
     f'Une marge de sécurité est conservée par Lisa à hauteur de {sep_milliers(SECURITE_LISA)} €.'
@@ -427,10 +435,11 @@ st.markdown(
 st.markdown(
     """
     Cette simulation ne tient pas compte :
-    * des 30% de réduction sur l'assurance emprunteur,
+    * des 30 % de réduction sur l'assurance emprunteur,
     * des éventuels frais de courtage,
     * des éventuels frais de tenue de compte en cas d'ouverture de compte dans une banque,
     * des éventuels frais de garanties (hypothèque ou cautionnement)
+    * d'une éventuelle renégociation de taux ultérieure
 
     Hypothèses prises :
     * Pour prédire l'inflation, on a estimé l'inflation moyenne dans la ville

@@ -14,7 +14,7 @@ TAUX_BNP = {
 
 # On considère 'Bon taux'
 TAUX_NOMINAL_PUBLIC = {
-    15: 0.0373,
+    15: 0.0371,
     20: 0.0381,
     25: 0.0391
 }
@@ -107,15 +107,47 @@ def nb_mois_depuis_que_lisa_économise():
     return (datetime.date.today() - dt_début_INSPART).days // 30.5
 
 
-def montant_qui_sera_remboursé_à_date(
-    date_début_du_prêt_existant,
-    mt_remboursé_par_mois,
-    date=datetime.date.today()
+def get_tableau_amortissement_prêt_pierre(montant_emprunté: float):
+    """
+    Le tableau est récupéré depuis de site :
+    https://www.anil.org/outils/outils-de-calcul/echeancier-dun-pret/
+    """
+    columns = (
+        "Echéance;Intérêts;Amortissement;"
+        "CRD en fin de période;Assurance;Mensualité"
+    ).split(';')
+    df = pd.read_csv('data/tableau_amortissement.csv', sep='\t', header=None, names=columns)
+    df = df.applymap(
+        lambda x: str(x).replace(',', '.').replace(' ', '').replace('€', '')
+    ).astype(float)
+    df['mt_emprunt_initial'] = montant_emprunté
+    df['CRD_précis'] = (df['mt_emprunt_initial'] - df['Amortissement'].cumsum())
+    return df
+
+
+def nb_mois_depuis_que_pierre_rembourse_son_prêt(
+    date_début_du_prêt_existant, à_date=datetime.date.today()
 ):
-    """Le montant qui aura été remboursé à la `date`"""
-    nb_mois_depuis_début_du_prêt = round((date - date_début_du_prêt_existant).days / 30.5)
-    montant_qui_sera_remboursé = nb_mois_depuis_début_du_prêt * mt_remboursé_par_mois
-    return montant_qui_sera_remboursé
+    dt_début = date_début_du_prêt_existant
+    return (à_date - dt_début).days // 30.5
+
+
+def get_CRD_à_date(à_date, date_début_du_prêt_existant, montant_emprunté: float):
+    nb_mois = nb_mois_depuis_que_pierre_rembourse_son_prêt(
+        date_début_du_prêt_existant, à_date=à_date
+    )
+    amortissement = get_tableau_amortissement_prêt_pierre(montant_emprunté)
+    cond = amortissement.Echéance == nb_mois
+    return amortissement.loc[cond, 'CRD en fin de période'].squeeze()
+
+
+# Ce test vérifie que, le 31 mai 2024, le CRD était bien de 156_980€,
+# conformément au site de LBP
+assert get_CRD_à_date(
+    à_date=datetime.date(2024, 5, 31),
+    date_début_du_prêt_existant=datetime.date(2020, 5, 5),
+    montant_emprunté=192_820
+) == 156_980
 
 
 def img_to_bytes(img_path):
