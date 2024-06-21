@@ -345,7 +345,6 @@ if select_avec_vente_appartement:
         f"(prix de revente estimé à {sep_milliers(prix_estimé_revente)} €, "
         f"amputé du CRD de {sep_milliers(CRD)} €)."
     )
-st.markdown(phrase + '.')
 
 st.markdown(f"Notre budget total d'achat est donc de {sep_milliers(budget)} €.")
 
