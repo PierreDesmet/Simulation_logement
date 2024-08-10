@@ -169,7 +169,7 @@ st.sidebar.markdown(
 )
 select_gain_mensuel_pde = st.sidebar.slider(
     'Gain mensuel Pierre',
-    min_value=1000, max_value=2500, value=1600, step=100
+    min_value=1000, max_value=2500, value=1400, step=100
 )
 
 select_gain_mensuel_lvo = st.sidebar.slider(
@@ -208,11 +208,11 @@ nb_mois_restants_avant_achat = round(
 nb_années_restantes_avant_achat = nb_mois_restants_avant_achat / 12
 
 sign = np.sign(lieu_to_inflation_appart['CACHAN'])
-inflation_annuelle_cachan = abs(lieu_to_inflation_appart['CACHAN']) ** (1 / 5)
+inflation_annuelle_cachan = abs(1 + lieu_to_inflation_appart['CACHAN']) ** (1 / 10)
 inflation_cachan_avant_achat = sign * (
     inflation_annuelle_cachan ** nb_années_restantes_avant_achat
 )
-prix_estimé_revente = PRIX_APPARTEMENT_CACHAN * (1 + inflation_cachan_avant_achat)
+prix_estimé_revente = PRIX_APPARTEMENT_CACHAN * inflation_cachan_avant_achat
 
 CRD = get_CRD_à_date(
     à_date=select_date_achat,
@@ -286,11 +286,21 @@ mensualité_max_lvo = calcule_mensualité_max_lvo()
 mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
+if select_avec_vente_appartement:
+    phrase = (
+        "L'appartement de Cachan :\n"
+        f"* En tenant compte d'une inflation annuelle de {(inflation_annuelle_cachan - 1):.2%} "
+        "les 10 dernières années, le prix de revente est estimé "
+        f"à {sep_milliers(prix_estimé_revente)} €.\n"
+        f"* Le CRD au {select_date_achat.strftime('%d/%m/%Y')} sera de {sep_milliers(CRD)} €.\n"
+        f"La revente de l'appartement apportera donc {sep_milliers(solde_revente)} €."
+    )
+    st.markdown(phrase)
+
 st.markdown(
-    'Mensualité maximale supportable par Lisa et Pierre : '
-    f'{sep_milliers(mensualité_maximale)} €, '
-    f'dont {sep_milliers(mensualité_max_pde)} € Pierre et '
-    f'{sep_milliers(mensualité_max_lvo)} € Lisa.'
+    f'Notre apport sera de {sep_milliers(montant_total_qui_sera_apporté)} €, '
+    f'dont {sep_milliers(apport_qui_sera_apporté_lvo)} € pour Lisa '
+    f'et {sep_milliers(apport_qui_sera_apporté_pde)} € pour Pierre.'
 )
 
 mensualité_plafond_pde_PEL = curseur_PEL * mensualité_max_pde
@@ -321,10 +331,15 @@ mt_emprunt_max = mt_prêt_principal + mt_prêt_PEL
 mensualités_prêt_principal = mensualité_max_pde_prêt_principal + mensualité_max_lvo
 
 phrase = (
+    'Mensualité maximale supportable par Lisa et Pierre : '
+    f'{sep_milliers(mensualité_maximale)} €, '
+    f'dont {sep_milliers(mensualité_max_pde)} € pour Pierre et '
+    f'{sep_milliers(mensualité_max_lvo)} € pour Lisa.\n'
     f'Cette mensualité, adossée à un taux nominal de {tx_nominal:.2%}, '
     f"permet d'emprunter au maximum {sep_milliers(mt_emprunt_max)} € "
-    f'sur {select_nb_années_pr_rembourser} ans :'
+    f'sur {select_nb_années_pr_rembourser} ans.'
 )
+st.markdown(phrase)
 
 if est_PEL_intéressant:
     st.markdown(
@@ -337,32 +352,29 @@ if est_PEL_intéressant:
         f'avec le prêt principal (sur {select_nb_années_pr_rembourser} ans '
         f'avec des mensualités de {sep_milliers(mensualités_prêt_principal)} €)'
     )
-budget = montant_total_qui_sera_apporté + mt_emprunt_max
-phrase = f'Notre apport est de {sep_milliers(montant_total_qui_sera_apporté)} €'
-if select_avec_vente_appartement:
-    phrase += (
-        f", dont {sep_milliers(solde_revente)} € liés à la revente de l'appartement de Cachan "
-        f"(prix de revente estimé à {sep_milliers(prix_estimé_revente)} €, "
-        f"amputé du CRD de {sep_milliers(CRD)} €)."
-    )
 
-st.markdown(f"Notre budget total d'achat est donc de {sep_milliers(budget)} €.")
+budget = montant_total_qui_sera_apporté + mt_emprunt_max
+
+st.markdown(f"Notre budget total d'achat sera donc de {sep_milliers(budget)} €.")
 
 st.markdown("Attention, il faut prendre en compte :")
 lieu_to_inflation = (
     lieu_to_inflation_appart if select_appart_ou_maison == 'Appartement'
     else lieu_to_inflation_maison
 )
-inflation_par_an_les_5_dernières_années = lieu_to_inflation[select_ville] ** (1 / 5)
+inflation_par_an_les_10_dernières_années = abs(1 + lieu_to_inflation[select_ville]) ** (1 / 10) - 1
+
 inflation_temps_restant_avant_achat = (
-    inflation_par_an_les_5_dernières_années ** nb_années_restantes_avant_achat
+    (1 + inflation_par_an_les_10_dernières_années) ** nb_années_restantes_avant_achat
 )
-budget = round(budget / (1 + inflation_temps_restant_avant_achat))
+budget = round(budget / inflation_temps_restant_avant_achat)
 url_meilleurs_agents = lieu_to_url_meilleurs_agents[select_ville]
 st.markdown(
     f"* [L'inflation](https://www.meilleursagents.com/prix-immobilier/{url_meilleurs_agents}/)"
-    f" ({lieu_to_inflation[select_ville]:.2%} en 5 ans à {select_ville}) : "
-    f'reste {sep_milliers(budget)} €'
+    f' ({lieu_to_inflation[select_ville]:.2%} en 10 ans à {select_ville}, '
+    f'soit {inflation_par_an_les_10_dernières_années:.2%} par an, '
+    f"soit {inflation_temps_restant_avant_achat - 1:.2%} d'ici les "
+    f"{nb_années_restantes_avant_achat:.0f} ans avant l'achat) : reste {sep_milliers(budget)} €"
 )
 
 coût_crédit_principal = (
@@ -424,7 +436,7 @@ st.markdown('-' * 3)
 st.markdown(
     'Pour être exhaustive, cette simulation devrait aussi tenir compte '
     'des gros impacts sur nos finances :\n'
-    '* un enfant, le ravalement, un mariage, des voyages, etc.\n'
+    '* un enfant, un mariage, des voyages, etc.\n'
     '* un héritage, une donation, les JO 2024, etc.'
 )
 st.markdown(
@@ -437,12 +449,13 @@ st.markdown(
     * des 30 % de réduction sur l'assurance emprunteur,
     * des éventuels frais de courtage,
     * des éventuels frais de tenue de compte en cas d'ouverture de compte dans une banque,
-    * des éventuels frais de garanties (hypothèque ou cautionnement)
-    * d'une éventuelle renégociation de taux ultérieure
+    * des éventuels frais de garanties (hypothèque ou cautionnement),
+    * d'une éventuelle renégociation de taux ultérieure,
+    * de l'[impôt sur la plus-value immobilière](https://www.service-public.fr/particuliers/vosdroits/F10864) en cas d'achat d'une résidence secondaire (TODO)
 
     Hypothèses prises :
     * Pour prédire l'inflation, on a estimé l'inflation moyenne dans la ville
-    sur les 5 dernières années, et projeté ce taux d'inflation sur le temps restant avant achat.
+    sur les 10 dernières années, et projeté ce taux d'inflation sur le temps restant avant achat.
     * En cas de revente de mon appartement, on suppose que la vente a lieu en même temps que
     l'achat du futur logement.
     """
