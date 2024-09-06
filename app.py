@@ -95,7 +95,7 @@ select_ville = st.sidebar.selectbox(
     index=sorted(lieu_to_inflation_appart).index('RUEIL-MALMAISON')
 )
 select_appart_ou_maison = st.sidebar.selectbox(
-    'Appartement ou maison', ['Appartement', 'Maison']
+    'Appartement ou maison', ['Maison', 'Appartement']
 )
 select_neuf_ancien = st.sidebar.selectbox('Neuf ou ancien', ['Ancien', 'Neuf'])
 select_date_achat = st.sidebar.date_input('Date achat futur logement', datetime.date(2029, 1, 1))
@@ -159,7 +159,7 @@ else:
 select_tx_frais_agence = st.sidebar.slider(
     "[Frais d'agence en %]"
     "(https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf)",
-    3.0, 6.0, 4.5, step=0.5
+    5.0, 7.0, 6.0, step=0.5
 )
 select_tx_frais_agence /= 100
 
@@ -178,7 +178,7 @@ select_gain_mensuel_lvo = st.sidebar.slider(
 )
 select_apport_actuel_pde = st.sidebar.slider(
     'Apport actuel Pierre',
-    min_value=20_000, max_value=150_000, value=60_000, step=5000
+    min_value=20_000, max_value=150_000, value=70_000, step=5000
 )
 apport_lvo_actuel_default = int(
     select_gain_mensuel_lvo * nb_mois_depuis_que_lisa_économise() - SECURITE_LISA
@@ -286,6 +286,7 @@ mensualité_max_lvo = calcule_mensualité_max_lvo()
 mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
+st.markdown('_Mis à jour le 06/09/2024_')
 if select_avec_vente_appartement:
     phrase = (
         "L'appartement de Cachan :\n"
