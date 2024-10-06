@@ -159,7 +159,7 @@ else:
 select_tx_frais_agence = st.sidebar.slider(
     "[Frais d'agence en %]"
     "(https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf)",
-    5.0, 7.0, 6.0, step=0.5
+    0.0, 7.0, 6.0, step=0.5
 )
 select_tx_frais_agence /= 100
 
@@ -286,7 +286,7 @@ mensualité_max_lvo = calcule_mensualité_max_lvo()
 mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
-st.markdown('_Mis à jour le 06/09/2024_')
+st.markdown('_Mis à jour le 06/10/2024_')
 if select_avec_vente_appartement:
     phrase = (
         "L'appartement de Cachan :\n"
