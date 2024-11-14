@@ -7,16 +7,16 @@ from pathlib import Path
 
 
 TAUX_BNP = {
-    15: 0.0263,
-    20: 0.0266,
-    25: 0.0266
+    15: 0.0247,
+    20: 0.0253,
+    25: 0.0257
 }
 
 # On considère 'Bon taux'
 TAUX_NOMINAL_PUBLIC = {
-    15: 0.0344,
-    20: 0.0348,
-    25: 0.0358
+    15: 0.0343,
+    20: 0.0345,
+    25: 0.0359
 }
 
 TAUX_PEL = 0.0345  # Taux d'emprunt du PEL, fixé au moment de l'ouverture du contrat en 02/2024

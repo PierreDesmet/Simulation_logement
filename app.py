@@ -74,7 +74,7 @@ st.set_page_config(
     page_icon=Image.open("logo.png")
 )
 
-st.header("🏠  Estimation logement 2029")
+st.header("🏠  Estimation logement 2030")
 
 
 @st.cache_data()
@@ -98,7 +98,7 @@ select_appart_ou_maison = st.sidebar.selectbox(
     'Appartement ou maison', ['Maison', 'Appartement']
 )
 select_neuf_ancien = st.sidebar.selectbox('Neuf ou ancien', ['Ancien', 'Neuf'])
-select_date_achat = st.sidebar.date_input('Date achat futur logement', datetime.date(2029, 1, 1))
+select_date_achat = st.sidebar.date_input('Date achat futur logement', datetime.date(2030, 1, 1))
 
 
 st.sidebar.markdown(
@@ -169,12 +169,12 @@ st.sidebar.markdown(
 )
 select_gain_mensuel_pde = st.sidebar.slider(
     'Gain mensuel Pierre',
-    min_value=1000, max_value=2500, value=1400, step=100
+    min_value=1000, max_value=2500, value=1500, step=100
 )
 
 select_gain_mensuel_lvo = st.sidebar.slider(
     'Gain mensuel Lisa',
-    min_value=1000, max_value=2500, value=2000, step=100
+    min_value=1000, max_value=2500, value=2200, step=100
 )
 select_apport_actuel_pde = st.sidebar.slider(
     'Apport actuel Pierre',
@@ -286,7 +286,7 @@ mensualité_max_lvo = calcule_mensualité_max_lvo()
 mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
-st.markdown('_Mis à jour le 06/10/2024_')
+st.markdown('_Mis à jour le 14/11/2024_')
 if select_avec_vente_appartement:
     phrase = (
         "L'appartement de Cachan :\n"
