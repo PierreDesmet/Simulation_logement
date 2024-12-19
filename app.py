@@ -286,7 +286,7 @@ mensualité_max_lvo = calcule_mensualité_max_lvo()
 mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
-st.markdown('_Mis à jour le 14/11/2024_')
+st.markdown('_Mis à jour le 19/12/2024_')
 if select_avec_vente_appartement:
     phrase = (
         "L'appartement de Cachan :\n"
