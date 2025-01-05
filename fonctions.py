@@ -20,7 +20,7 @@ TAUX_NOMINAL_PUBLIC = {
 }
 
 TAUX_PEL = 0.0345  # Taux d'emprunt du PEL, fixé au moment de l'ouverture du contrat en 02/2024
-
+INFLATION_SUR_NB_YEARS = 10
 # en 10 ans (https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/)
 lieu_to_inflation_appart = {
     'CACHAN': 0.075,

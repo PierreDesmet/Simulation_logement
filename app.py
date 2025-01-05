@@ -25,23 +25,17 @@ Sources :
 - PEL : https://www.service-public.fr/particuliers/vosdroits/F16140
 """
 import datetime
+
 import numpy as np
 import pandas as pd
 import streamlit as st
 from PIL import Image
 
 from fonctions import (
-    lieu_to_inflation_appart,
-    lieu_to_inflation_maison,
-    lieu_to_url_meilleurs_agents,
-    get_mt_emprunt_max,
-    sep_milliers,
-    nb_mois_depuis_que_lisa_économise,
-    get_CRD_à_date,
-    img_to_bytes,
-    get_mt_max_prêt_PEL,
-    TAUX_BNP, TAUX_NOMINAL_PUBLIC, TAUX_PEL,
-    barême
+    INFLATION_SUR_NB_YEARS, TAUX_BNP, TAUX_NOMINAL_PUBLIC, TAUX_PEL, barême, get_CRD_à_date,
+    get_mt_emprunt_max, get_mt_max_prêt_PEL, img_to_bytes, lieu_to_inflation_appart,
+    lieu_to_inflation_maison, lieu_to_url_meilleurs_agents, nb_mois_depuis_que_lisa_économise,
+    sep_milliers
 )
 
 # Hypothèses
@@ -74,7 +68,7 @@ st.set_page_config(
     page_icon=Image.open("logo.png")
 )
 
-st.header("🏠  Estimation logement 2030")
+titre = st.empty()
 
 
 @st.cache_data()
@@ -99,7 +93,7 @@ select_appart_ou_maison = st.sidebar.selectbox(
 )
 select_neuf_ancien = st.sidebar.selectbox('Neuf ou ancien', ['Ancien', 'Neuf'])
 select_date_achat = st.sidebar.date_input('Date achat futur logement', datetime.date(2030, 1, 1))
-
+titre.header("🏠  Estimation logement " + str(select_date_achat.year))
 
 st.sidebar.markdown(
     md_from_title_and_img("Emprunt", 'bnp-paribas.jpg'),
@@ -208,7 +202,9 @@ nb_mois_restants_avant_achat = round(
 nb_années_restantes_avant_achat = nb_mois_restants_avant_achat / 12
 
 sign = np.sign(lieu_to_inflation_appart['CACHAN'])
-inflation_annuelle_cachan = abs(1 + lieu_to_inflation_appart['CACHAN']) ** (1 / 10)
+inflation_annuelle_cachan = abs(
+    1 + lieu_to_inflation_appart['CACHAN']
+) ** (1 / INFLATION_SUR_NB_YEARS)
 inflation_cachan_avant_achat = sign * (
     inflation_annuelle_cachan ** nb_années_restantes_avant_achat
 )
@@ -287,6 +283,12 @@ mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
 st.markdown('_Mis à jour le 19/12/2024_')
+
+age_lisa, age_pierre = select_date_achat.year - 1998, select_date_achat.year - 1993
+st.markdown(
+    f"Lisa aura {age_lisa} ans, Pierre aura {age_pierre} ans."
+)
+
 if select_avec_vente_appartement:
     phrase = (
         "L'appartement de Cachan :\n"
@@ -445,7 +447,7 @@ st.markdown(
 )
 
 st.markdown(
-    """
+    f"""
     Cette simulation ne tient pas compte :
     * des 30 % de réduction sur l'assurance emprunteur,
     * des éventuels frais de courtage,
@@ -456,7 +458,7 @@ st.markdown(
 
     Hypothèses prises :
     * Pour prédire l'inflation, on a estimé l'inflation moyenne dans la ville
-    sur les 10 dernières années, et projeté ce taux d'inflation sur le temps restant avant achat.
+    sur les {INFLATION_SUR_NB_YEARS} dernières années, et projeté ce taux d'inflation sur le temps restant avant achat.
     * En cas de revente de mon appartement, on suppose que la vente a lieu en même temps que
     l'achat du futur logement.
     """
