@@ -92,7 +92,7 @@ select_appart_ou_maison = st.sidebar.selectbox(
     'Appartement ou maison', ['Maison', 'Appartement']
 )
 select_neuf_ancien = st.sidebar.selectbox('Neuf ou ancien', ['Ancien', 'Neuf'])
-select_date_achat = st.sidebar.date_input('Date achat futur logement', datetime.date(2030, 1, 1))
+select_date_achat = st.sidebar.date_input('Date achat futur logement', datetime.date(2029, 1, 1))
 titre.header("🏠  Estimation logement " + str(select_date_achat.year))
 
 st.sidebar.markdown(
@@ -282,9 +282,9 @@ mensualité_max_lvo = calcule_mensualité_max_lvo()
 mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
-st.markdown('_Mis à jour le 19/12/2024_')
+st.markdown('_Mis à jour le 02/01/2025_')
 
-age_lisa, age_pierre = select_date_achat.year - 1998, select_date_achat.year - 1993
+age_lisa, age_pierre = select_date_achat.year - 1998 - 1, select_date_achat.year - 1993 - 1
 st.markdown(
     f"Lisa aura {age_lisa} ans, Pierre aura {age_pierre} ans."
 )
@@ -293,7 +293,7 @@ if select_avec_vente_appartement:
     phrase = (
         "L'appartement de Cachan :\n"
         f"* En tenant compte d'une inflation annuelle de {(inflation_annuelle_cachan - 1):.2%} "
-        "les 10 dernières années, le prix de revente est estimé "
+        f"les {INFLATION_SUR_NB_YEARS} dernières années, le prix de revente est estimé "
         f"à {sep_milliers(prix_estimé_revente)} €.\n"
         f"* Le CRD au {select_date_achat.strftime('%d/%m/%Y')} sera de {sep_milliers(CRD)} €.\n"
         f"La revente de l'appartement apportera donc {sep_milliers(solde_revente)} €."
@@ -365,17 +365,19 @@ lieu_to_inflation = (
     lieu_to_inflation_appart if select_appart_ou_maison == 'Appartement'
     else lieu_to_inflation_maison
 )
-inflation_par_an_les_10_dernières_années = abs(1 + lieu_to_inflation[select_ville]) ** (1 / 10) - 1
+inflation_par_an_les_x_dernières_années = abs(
+    1 + lieu_to_inflation[select_ville]
+) ** (1 / INFLATION_SUR_NB_YEARS) - 1
 
 inflation_temps_restant_avant_achat = (
-    (1 + inflation_par_an_les_10_dernières_années) ** nb_années_restantes_avant_achat
+    (1 + inflation_par_an_les_x_dernières_années) ** nb_années_restantes_avant_achat
 )
 budget = round(budget / inflation_temps_restant_avant_achat)
 url_meilleurs_agents = lieu_to_url_meilleurs_agents[select_ville]
 st.markdown(
     f"* [L'inflation](https://www.meilleursagents.com/prix-immobilier/{url_meilleurs_agents}/)"
-    f' ({lieu_to_inflation[select_ville]:.2%} en 10 ans à {select_ville}, '
-    f'soit {inflation_par_an_les_10_dernières_années:.2%} par an, '
+    f' ({lieu_to_inflation[select_ville]:.2%} en {INFLATION_SUR_NB_YEARS} ans à {select_ville}, '
+    f'soit {inflation_par_an_les_x_dernières_années:.2%} par an, '
     f"soit {inflation_temps_restant_avant_achat - 1:.2%} d'ici les "
     f"{nb_années_restantes_avant_achat:.0f} ans avant l'achat) : reste {sep_milliers(budget)} €"
 )
@@ -459,7 +461,7 @@ st.markdown(
     Hypothèses prises :
     * Pour prédire l'inflation, on a estimé l'inflation moyenne dans la ville
     sur les {INFLATION_SUR_NB_YEARS} dernières années, et projeté ce taux d'inflation sur le temps restant avant achat.
-    * En cas de revente de mon appartement, on suppose que la vente a lieu en même temps que
+    * En cas de revente de l'appartement cachanais, on suppose que la vente a lieu en même temps que
     l'achat du futur logement.
     """
 )
