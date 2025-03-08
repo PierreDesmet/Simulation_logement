@@ -17,6 +17,7 @@ Réflexion sur le PEL, pour un souscription en janvier 2024 :
     https://www.lesfurets.com/pret-immobilier/barometre-taux/votre-taux)
 
 Sources :
+- https://www.salaire-brut-en-net.fr
 - https://www.service-public.fr/particuliers/vosdroits/F2456
 - https://www.meilleurtaux.com/credit-immobilier/barometre-des-taux.html
 - https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf
@@ -60,7 +61,8 @@ DURÉE_MAX_CRÉDIT_EN_MOIS = 25 * 12
 PARTICIPATION = 3346  # montant pour 2023
 INTERESSEMENT = 3000  # montant pour 2023
 PARTICIPATION_INTERESSEMENT = PARTICIPATION + INTERESSEMENT
-W_VARIABLE = (2000 + 1000) * (12 / 4)  # prorata de présence 2022, montant annuel
+W_TOTAL_AVANT_IMPÔT = (67_000 + 5000 + 12_000) * (63_000 / 84_000)  # hors PI et abondemment
+W_VARIABLE_AVANT_IMPÔT = 12_000 * (63_000 / 84_000)  # https://www.salaire-brut-en-net.fr
 
 
 st.set_page_config(
@@ -117,7 +119,7 @@ select_remb_anticipé_gratuit = st.sidebar.checkbox(
 
 select_nb_années_pr_rembourser = st.sidebar.slider(
     "Nombre d'années pour rembourser le crédit",
-    min_value=15, max_value=25, value=25, step=5
+    min_value=15, max_value=25, value=20, step=5
 )
 
 if select_avec_crédit_BNP:
@@ -163,7 +165,7 @@ st.sidebar.markdown(
 )
 select_gain_mensuel_pde = st.sidebar.slider(
     'Gain mensuel Pierre',
-    min_value=1000, max_value=2500, value=1500, step=100
+    min_value=1000, max_value=2500, value=1800, step=100
 )
 
 select_gain_mensuel_lvo = st.sidebar.slider(
@@ -172,7 +174,7 @@ select_gain_mensuel_lvo = st.sidebar.slider(
 )
 select_apport_actuel_pde = st.sidebar.slider(
     'Apport actuel Pierre',
-    min_value=20_000, max_value=150_000, value=70_000, step=5000
+    min_value=20_000, max_value=150_000, value=100_000, step=5000
 )
 apport_lvo_actuel_default = int(
     select_gain_mensuel_lvo * nb_mois_depuis_que_lisa_économise() - SECURITE_LISA
@@ -182,15 +184,16 @@ select_apport_actuel_lvo = st.sidebar.slider(
     min_value=20_000, max_value=150_000, value=apport_lvo_actuel_default, step=5000
 )
 select_w_mensuel_pde_date_achat = st.sidebar.slider(
-    "Salaire mensuel net av. impôt Pierre à date d'achat",
-    min_value=3000, max_value=5000, value=4200, step=100
+    "Salaire mensuel net av. impôt Pierre à date d'achat",  # Hors variable !
+    min_value=3000, max_value=6000,
+    value=int((W_TOTAL_AVANT_IMPÔT - W_VARIABLE_AVANT_IMPÔT) / 12), step=100
 )
 # En sept. 2023, 3624 * 13 / 12 = 3930 de mensuel net avant impôt
 # En avril 2024, 3652 * 13 / 12 = 3956 de mensuel net avant impôt
 
 select_w_mensuel_lvo_date_achat = st.sidebar.slider(
     "Salaire mensuel net av. impôt Lisa à date d'achat",
-    min_value=3000, max_value=5000, value=3500
+    min_value=3000, max_value=6000, value=3500
 )
 # En 2023, 36 174 € / 12 = 3015€ de mensuel net avant impôt
 # En 2024, (salaire brut = 46 000 * 1,07) * (PS -> 0.8) * (1 / 12) = 3280
@@ -242,7 +245,7 @@ montant_total_qui_sera_apporté = apport_qui_sera_apporté_pde + apport_qui_sera
 def calcule_mensualité_max_pde(
     w_mensuel_pde_date_achat=select_w_mensuel_pde_date_achat,
     prise_en_compte_du_variable=select_prise_en_compte_du_variable,
-    w_variable=W_VARIABLE,
+    w_variable=W_VARIABLE_AVANT_IMPÔT,
     taux_max_endettement=TAUX_MAX_ENDETTEMENT,
     prise_en_compte_participation_interessement=select_prise_en_compte_participation_interessement,
     participation_intéressement=PARTICIPATION_INTERESSEMENT,
@@ -282,7 +285,7 @@ mensualité_max_lvo = calcule_mensualité_max_lvo()
 mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
-st.markdown('_Mis à jour le 02/01/2025_')
+st.markdown('_Mis à jour le 06/03/2025_')
 
 age_lisa, age_pierre = select_date_achat.year - 1998 - 1, select_date_achat.year - 1993 - 1
 st.markdown(

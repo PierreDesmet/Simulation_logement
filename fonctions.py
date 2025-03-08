@@ -7,43 +7,40 @@ from pathlib import Path
 
 
 TAUX_BNP = {
-    15: 0.0234,
-    20: 0.0239,
-    25: 0.0244
+    15: 0.0227,
+    20: 0.0235,
+    25: 0.0238
 }
 
 # On considère 'Bon taux'
 TAUX_NOMINAL_PUBLIC = {
-    15: 0.0335,
-    20: 0.0341,
-    25: 0.0351
+    15: 0.0319,
+    20: 0.0332,
+    25: 0.0335
 }
 
 TAUX_PEL = 0.0345  # Taux d'emprunt du PEL, fixé au moment de l'ouverture du contrat en 02/2024
 INFLATION_SUR_NB_YEARS = 5
 # https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/
 lieu_to_inflation_appart = {
-    'CACHAN': 0.045,
-    'CHATOU': 0.031,
-    'MAISONS-LAFFITTE': -0.078,
-    'RUEIL-MALMAISON': -0.039,
+    'CACHAN': 0.022,
+    'CHATOU': -0.05,
+    'RUEIL-MALMAISON': -0.044,
     'VÉSINET': -0.078
 }
 
 # https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/
 lieu_to_inflation_maison = {
-    'CACHAN': 0.024,
-    'CHATOU': -0.025,
-    'MAISONS-LAFFITTE': 0.06,
-    'RUEIL-MALMAISON': 0.04,
-    'VÉSINET': 0.03
+    'CACHAN': 0.041,
+    'CHATOU': -0.012,
+    'RUEIL-MALMAISON': -0.024,
+    'VÉSINET': 0.025
 }
 
 lieu_to_url_meilleurs_agents = {
     'CACHAN': 'cachan-94230',
     'CHATOU': 'chatou-78400',
     'HOUILLES': 'houilles-78800',
-    'MAISONS-LAFFITTE': 'maisons-laffitte-78600',
     'RUEIL-MALMAISON': 'rueil-malmaison-92500',
     'VÉSINET': 'le-vesinet-78110',
     'SAINT-GERMAIN EN LAYE': 'saint-germain-en-laye-78100'
