@@ -208,8 +208,13 @@ sign = np.sign(lieu_to_inflation_appart['CACHAN'])
 inflation_annuelle_cachan = abs(
     1 + lieu_to_inflation_appart['CACHAN']
 ) ** (1 / INFLATION_SUR_NB_YEARS)
+années_depuis_achat = (
+    (
+        datetime.date.today() - DATE_DÉBUT_DU_PRÊT_EXISTANT
+    ).days / 365 + nb_années_restantes_avant_achat
+)
 inflation_cachan_avant_achat = sign * (
-    inflation_annuelle_cachan ** nb_années_restantes_avant_achat
+    inflation_annuelle_cachan ** (années_depuis_achat)
 )
 prix_estimé_revente = PRIX_APPARTEMENT_CACHAN * inflation_cachan_avant_achat
 
@@ -285,16 +290,19 @@ mensualité_max_lvo = calcule_mensualité_max_lvo()
 mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
-st.markdown('_Mis à jour le 06/03/2025_')
+st.markdown('_Mis à jour le 09/03/2025_')
 
 age_lisa, age_pierre = select_date_achat.year - 1998 - 1, select_date_achat.year - 1993 - 1
 st.markdown(
     f"Lisa aura {age_lisa} ans, Pierre aura {age_pierre} ans."
 )
 
+mois_depuis_achat = (années_depuis_achat * 12)
+pct_remboursé = mois_depuis_achat / 240
 if select_avec_vente_appartement:
     phrase = (
-        "L'appartement de Cachan :\n"
+        f"L'appartement de Cachan sera remboursé à {pct_remboursé:.0%} "
+        f"depuis {années_depuis_achat:.2} années ({int(mois_depuis_achat)} / 240 mensualités) :\n"
         f"* En tenant compte d'une inflation annuelle de {(inflation_annuelle_cachan - 1):.2%} "
         f"les {INFLATION_SUR_NB_YEARS} dernières années, le prix de revente est estimé "
         f"à {sep_milliers(prix_estimé_revente)} €.\n"
