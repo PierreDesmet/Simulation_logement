@@ -58,8 +58,8 @@ TAUX_MAX_ENDETTEMENT = 0.35  # assurance comprise
 # des crédits immobiliers"
 DURÉE_MAX_CRÉDIT_EN_MOIS = 25 * 12
 
-PARTICIPATION = 3346  # montant pour 2023
-INTERESSEMENT = 3000  # montant pour 2023
+PARTICIPATION = 3697  # montant pour 2024
+INTERESSEMENT = 3460  # montant pour 2024
 PARTICIPATION_INTERESSEMENT = PARTICIPATION + INTERESSEMENT
 W_TOTAL_AVANT_IMPÔT = (67_000 + 5000 + 12_000) * (63_000 / 84_000)  # hors PI et abondemment
 W_VARIABLE_AVANT_IMPÔT = 12_000 * (63_000 / 84_000)  # https://www.salaire-brut-en-net.fr
@@ -290,7 +290,7 @@ mensualité_max_lvo = calcule_mensualité_max_lvo()
 mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
-st.markdown('_Mis à jour le 20/04/2025_')
+st.markdown('_Mis à jour le 11/05/2025_')
 
 age_lisa, age_pierre = select_date_achat.year - 1998 - 1, select_date_achat.year - 1993 - 1
 st.markdown(
