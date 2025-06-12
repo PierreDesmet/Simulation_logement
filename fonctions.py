@@ -7,15 +7,15 @@ from pathlib import Path
 
 
 TAUX_BNP = {
-    15: 0.0233,
-    20: 0.0239,
-    25: 0.0242
+    15: 0.0238,
+    20: 0.0245,
+    25: 0.0249
 }
 
 # On considère 'Bon taux'
 TAUX_NOMINAL_PUBLIC = {
-    15: 0.0326,
-    20: 0.0336,
+    15: 0.033,
+    20: 0.0338,
     25: 0.0342
 }
 
@@ -23,18 +23,18 @@ TAUX_PEL = 0.0345  # Taux d'emprunt du PEL, fixé au moment de l'ouverture du co
 INFLATION_SUR_NB_YEARS = 5
 # https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/
 lieu_to_inflation_appart = {
-    'CACHAN': 0.016,
-    'CHATOU': -0.001,
-    'RUEIL-MALMAISON': -0.046,
-    'VÉSINET': -0.041
+    'CACHAN': -0.105,
+    'CHATOU': -0.082,
+    'RUEIL-MALMAISON': -0.029,
+    'VÉSINET': -0.047
 }
 
 # https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/
 lieu_to_inflation_maison = {
-    'CACHAN': 0.029,
-    'CHATOU': -0.108,
-    'RUEIL-MALMAISON': -0.037,
-    'VÉSINET': 0.039
+    'CACHAN': 0.069,
+    'CHATOU': -0.081,
+    'RUEIL-MALMAISON': -0.086,
+    'VÉSINET': 0.023
 }
 
 lieu_to_url_meilleurs_agents = {
