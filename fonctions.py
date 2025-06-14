@@ -22,7 +22,7 @@ TAUX_NOMINAL_PUBLIC = {
 TAUX_PEL = 0.0345  # Taux d'emprunt du PEL, fixé au moment de l'ouverture du contrat en 02/2024
 INFLATION_SUR_NB_YEARS = 5
 # https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/
-lieu_to_inflation_appart = {
+LIEU_TO_INFLATION_APPART = {
     'CACHAN': -0.105,
     'CHATOU': -0.082,
     'RUEIL-MALMAISON': -0.029,
@@ -30,7 +30,7 @@ lieu_to_inflation_appart = {
 }
 
 # https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/
-lieu_to_inflation_maison = {
+LIEU_TO_INFLATION_MAISON = {
     'CACHAN': 0.069,
     'CHATOU': -0.081,
     'RUEIL-MALMAISON': -0.086,
@@ -263,3 +263,35 @@ assert mensualité == 372
 assert durée_du_prêt_PEL == 15
 assert mt_du_prêt_du_PEL == 169
 assert mensualité == 1
+
+
+def get_inflation_annuelle(inflation_cum: float, nb_years_cum: int) -> float:
+    """
+    Args:
+        inflation: par exemple 0.105 pour 10,5% sur `nb_years_inflation` années
+    """
+    inf_annuelle_en_pct = (1 + inflation_cum) ** (1 / nb_years_cum) - 1
+    return inf_annuelle_en_pct
+
+
+# Une inflation cumulée sur 5 ans de 10.5% correspond à 2% par an :
+assert get_inflation_annuelle(0.105, 5) == 0.020169782620610865
+assert get_inflation_annuelle(-0.105, 5) == -0.021942006004453285
+
+
+def projette_prix_inflate(
+    prix_initial: float, inf_annuelle_en_pct: float, nb_years_projetées: int
+) -> float:
+    """
+    Un prix_initial va subir une inflation annualisée de `inf_annuelle_en_pct` pendant `nb_years_projetées`. Quel est le nouveau prix ?
+    """
+    prix_final = prix_initial * (1 + inf_annuelle_en_pct) ** nb_years_projetées
+    return int(prix_final)
+
+
+prix_final = projette_prix_inflate(
+    prix_initial=1000,
+    inf_annuelle_en_pct=0.020169782620610865,
+    nb_years_projetées=5
+)
+assert prix_final == 1105

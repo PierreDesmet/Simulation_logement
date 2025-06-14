@@ -34,9 +34,9 @@ from PIL import Image
 
 from fonctions import (
     INFLATION_SUR_NB_YEARS, TAUX_BNP, TAUX_NOMINAL_PUBLIC, TAUX_PEL, barême, get_CRD_à_date,
-    get_mt_emprunt_max, get_mt_max_prêt_PEL, img_to_bytes, lieu_to_inflation_appart,
-    lieu_to_inflation_maison, lieu_to_url_meilleurs_agents, nb_mois_depuis_que_lisa_économise,
-    sep_milliers
+    get_mt_emprunt_max, get_mt_max_prêt_PEL, img_to_bytes, LIEU_TO_INFLATION_APPART,
+    LIEU_TO_INFLATION_MAISON, lieu_to_url_meilleurs_agents, nb_mois_depuis_que_lisa_économise,
+    sep_milliers, get_inflation_annuelle, projette_prix_inflate
 )
 
 # Hypothèses
@@ -87,8 +87,8 @@ st.sidebar.markdown(
 )
 
 select_ville = st.sidebar.selectbox(
-    'Ville', sorted(lieu_to_inflation_maison.keys()),
-    index=sorted(lieu_to_inflation_appart).index('RUEIL-MALMAISON')
+    'Ville', sorted(LIEU_TO_INFLATION_MAISON.keys()),
+    index=sorted(LIEU_TO_INFLATION_MAISON).index('RUEIL-MALMAISON')
 )
 select_appart_ou_maison = st.sidebar.selectbox(
     'Appartement ou maison', ['Maison', 'Appartement']
@@ -163,6 +163,9 @@ st.sidebar.markdown(
     md_from_title_and_img("Apports", 'tirelire.png'),
     unsafe_allow_html=True
 )
+select_avec_projection_inflation = st.sidebar.checkbox(
+    f"Avec projection d'inflation sur {INFLATION_SUR_NB_YEARS} ans", True
+)
 select_gain_mensuel_pde = st.sidebar.slider(
     'Gain mensuel Pierre',
     min_value=1000, max_value=2500, value=1800, step=100
@@ -199,24 +202,35 @@ select_w_mensuel_lvo_date_achat = st.sidebar.slider(
 # En 2024, (salaire brut = 46 000 * 1,07) * (PS -> 0.8) * (1 / 12) = 3280
 
 # Les dépendances
+lieu_to_inflation_appart, lieu_to_inflation_maison = {}, {}
+for k in LIEU_TO_INFLATION_APPART.keys():
+    lieu_to_inflation_appart[k] = (
+        LIEU_TO_INFLATION_APPART[k] if select_avec_projection_inflation else 0
+    )
+    lieu_to_inflation_maison[k] = (
+        LIEU_TO_INFLATION_MAISON[k] if select_avec_projection_inflation else 0
+    )
+
+années_depuis_achat = (
+    (
+        datetime.date.today() - DATE_DÉBUT_DU_PRÊT_EXISTANT
+    ).days / 365
+)
+
 nb_mois_restants_avant_achat = round(
     (select_date_achat - datetime.date.today()).days / 30.5
 )
 nb_années_restantes_avant_achat = nb_mois_restants_avant_achat / 12
 
-sign = np.sign(lieu_to_inflation_appart['CACHAN'])
-inflation_annuelle_cachan = abs(
-    1 + lieu_to_inflation_appart['CACHAN']
-) ** (1 / INFLATION_SUR_NB_YEARS)
-années_depuis_achat = (
-    (
-        datetime.date.today() - DATE_DÉBUT_DU_PRÊT_EXISTANT
-    ).days / 365 + nb_années_restantes_avant_achat
+inflation_annuelle_cachan = get_inflation_annuelle(
+    inflation_cum=lieu_to_inflation_appart['CACHAN'],
+    nb_years_cum=INFLATION_SUR_NB_YEARS
 )
-inflation_cachan_avant_achat = sign * (
-    inflation_annuelle_cachan ** (années_depuis_achat)
+prix_estimé_revente = projette_prix_inflate(
+    prix_initial=PRIX_APPARTEMENT_CACHAN,
+    inf_annuelle_en_pct=inflation_annuelle_cachan,
+    nb_years_projetées=nb_années_restantes_avant_achat
 )
-prix_estimé_revente = PRIX_APPARTEMENT_CACHAN * inflation_cachan_avant_achat
 
 CRD = get_CRD_à_date(
     à_date=select_date_achat,
@@ -290,7 +304,7 @@ mensualité_max_lvo = calcule_mensualité_max_lvo()
 mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
-st.markdown('_Mis à jour le 12/06/2025_')
+st.markdown('_Mis à jour le 14/06/2025_')
 
 age_lisa, age_pierre = select_date_achat.year - 1998 - 1, select_date_achat.year - 1993 - 1
 st.markdown(
@@ -303,7 +317,7 @@ if select_avec_vente_appartement:
     phrase = (
         f"L'appartement de Cachan sera remboursé à {pct_remboursé:.0%} "
         f"depuis {années_depuis_achat:.2} années ({int(mois_depuis_achat)} / 240 mensualités) :\n"
-        f"* En tenant compte d'une inflation annuelle de {(inflation_annuelle_cachan - 1):.2%} "
+        f"* En tenant compte d'une inflation annuelle de {inflation_annuelle_cachan:.2%} "
         f"les {INFLATION_SUR_NB_YEARS} dernières années, le prix de revente est estimé "
         f"à {sep_milliers(prix_estimé_revente)} €.\n"
         f"* Le CRD au {select_date_achat.strftime('%d/%m/%Y')} sera de {sep_milliers(CRD)} €.\n"
@@ -376,10 +390,10 @@ lieu_to_inflation = (
     lieu_to_inflation_appart if select_appart_ou_maison == 'Appartement'
     else lieu_to_inflation_maison
 )
-inflation_par_an_les_x_dernières_années = abs(
-    1 + lieu_to_inflation[select_ville]
-) ** (1 / INFLATION_SUR_NB_YEARS) - 1
-
+inflation_par_an_les_x_dernières_années = get_inflation_annuelle(
+    inflation_cum=lieu_to_inflation[select_ville],
+    nb_years_cum=INFLATION_SUR_NB_YEARS
+)
 inflation_temps_restant_avant_achat = (
     (1 + inflation_par_an_les_x_dernières_années) ** nb_années_restantes_avant_achat
 )
