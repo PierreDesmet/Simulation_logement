@@ -155,7 +155,7 @@ else:
 select_tx_frais_agence = st.sidebar.slider(
     "[Frais d'agence en %]"
     "(https://www.human-immobilier.fr/content/pdf/bareme_honoraires_human_immobilier.pdf)",
-    0.0, 7.0, 6.0, step=0.5
+    0.0, 7.0, 4.8, step=0.5
 )
 select_tx_frais_agence /= 100
 
@@ -213,7 +213,7 @@ for k in LIEU_TO_INFLATION_APPART.keys():
 
 années_depuis_achat = (
     (
-        datetime.date.today() - DATE_DÉBUT_DU_PRÊT_EXISTANT
+        select_date_achat - DATE_DÉBUT_DU_PRÊT_EXISTANT
     ).days / 365
 )
 
@@ -304,7 +304,7 @@ mensualité_max_lvo = calcule_mensualité_max_lvo()
 mensualité_max_pde = calcule_mensualité_max_pde()
 mensualité_maximale = mensualité_max_pde + mensualité_max_lvo
 
-st.markdown('_Mis à jour le 14/06/2025_')
+st.markdown('_Mis à jour le 05/04/2026_')
 
 age_lisa, age_pierre = select_date_achat.year - 1998 - 1, select_date_achat.year - 1993 - 1
 st.markdown(
@@ -318,7 +318,7 @@ if select_avec_vente_appartement:
         f"L'appartement de Cachan sera remboursé à {pct_remboursé:.0%} "
         f"depuis {années_depuis_achat:.2} années ({int(mois_depuis_achat)} / 240 mensualités) :\n"
         f"* En tenant compte d'une inflation annuelle de {inflation_annuelle_cachan:.2%} "
-        f"les {INFLATION_SUR_NB_YEARS} dernières années, le prix de revente est estimé "
+        f"les {INFLATION_SUR_NB_YEARS} dernières années à Cachan, le prix de revente est estimé "
         f"à {sep_milliers(prix_estimé_revente)} €.\n"
         f"* Le CRD au {select_date_achat.strftime('%d/%m/%Y')} sera de {sep_milliers(CRD)} €.\n"
         f"La revente de l'appartement apportera donc {sep_milliers(solde_revente)} €."
@@ -465,9 +465,9 @@ st.markdown('-' * 3)
 
 st.markdown(
     'Pour être exhaustive, cette simulation devrait aussi tenir compte '
-    'des gros impacts sur nos finances :\n'
-    '* un enfant, un mariage, des voyages, etc.\n'
-    '* un héritage, une donation, les JO 2024, etc.'
+    'des gros changements sur nos finances :\n'
+    '* Impact négatif : un enfant, un mariage, des voyages, un licenciement, etc.\n'
+    '* Impact positif : un héritage, une donation, ~les JO 2024~, etc.'
 )
 st.markdown(
     f'Une marge de sécurité est conservée par Lisa à hauteur de {sep_milliers(SECURITE_LISA)} €.'
@@ -476,6 +476,10 @@ st.markdown(
 st.markdown(
     f"""
     Cette simulation ne tient pas compte :
+    * pour l'estimation du prix de revente de l'appartement cachanais : 
+        * des travaux de rénovation qui ont été menés
+        * de l'amélioration du DPE lié au remplacement de chaudière, [au changement de mode de calcul](https://www.economie.gouv.fr/actualites/un-nouveau-dpe-au-1er-janvier-2026-pour-favoriser-le-chauffage-electrique), à la pose de robinets thermostatiques 
+        * du ravalement
     * des 30 % de réduction sur l'assurance emprunteur,
     * des éventuels frais de courtage,
     * des éventuels frais de tenue de compte en cas d'ouverture de compte dans une banque,

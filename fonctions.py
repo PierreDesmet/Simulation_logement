@@ -7,34 +7,34 @@ from pathlib import Path
 
 
 TAUX_BNP = {
-    15: 0.0238,
+    15: 0.0230,
     20: 0.0245,
-    25: 0.0249
+    25: 0.0245
 }
 
 # On considère 'Bon taux'
 TAUX_NOMINAL_PUBLIC = {
-    15: 0.033,
-    20: 0.0338,
-    25: 0.0342
+    15: 0.0337,
+    20: 0.0346,
+    25: 0.0354
 }
 
 TAUX_PEL = 0.0345  # Taux d'emprunt du PEL, fixé au moment de l'ouverture du contrat en 02/2024
 INFLATION_SUR_NB_YEARS = 5
 # https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/
 LIEU_TO_INFLATION_APPART = {
-    'CACHAN': -0.105,
-    'CHATOU': -0.082,
-    'RUEIL-MALMAISON': -0.029,
-    'VÉSINET': -0.047
+    'CACHAN': -0.038,
+    'CHATOU': -0.003,
+    'RUEIL-MALMAISON': -0.076,
+    'VÉSINET': -0.057
 }
 
 # https://www.meilleursagents.com/prix-immobilier/cachan-94230/rue-de-reims-2017464/1/
 LIEU_TO_INFLATION_MAISON = {
-    'CACHAN': 0.069,
-    'CHATOU': -0.081,
-    'RUEIL-MALMAISON': -0.086,
-    'VÉSINET': 0.023
+    'CACHAN': -0.122,
+    'CHATOU': -0.039,
+    'RUEIL-MALMAISON': -0.099,
+    'VÉSINET': -0.029
 }
 
 lieu_to_url_meilleurs_agents = {
@@ -112,7 +112,7 @@ def get_tableau_amortissement_prêt_pierre(montant_emprunté: float):
         "CRD en fin de période;Assurance;Mensualité"
     ).split(';')
     df = pd.read_csv('data/tableau_amortissement.csv', sep='\t', header=None, names=columns)
-    df = df.applymap(
+    df = df.map(
         lambda x: str(x).replace(',', '.').replace(' ', '').replace('€', '')
     ).astype(float)
     df['mt_emprunt_initial'] = montant_emprunté
